@@ -1,44 +1,55 @@
-const nodemailer = require('nodemailer');
+const https = require("https");
 
-/** App sender display name shown in inbox "From" alongside EMAIL_USER */
-const APP_SENDER_NAME = process.env.APP_NAME || 'MINIS App';
+const APP_SENDER_NAME = process.env.APP_NAME || "MINIS App";
 
-/** Gmail App Passwords are often pasted with spaces; SMTP expects the contiguous 16 chars. */
-function gmailPassNormalized() {
-  return String(process.env.EMAIL_PASS || '').replace(/\s+/g, '');
-}
-
-/** True when Gmail Nodemailer auth vars are present (minimal setup for signup mail). */
 function isSendEmailReady() {
-  const u = String(process.env.EMAIL_USER || '').trim();
-  const p = gmailPassNormalized();
-  return Boolean(u && p);
+  return Boolean(process.env.BREVO_API_KEY && process.env.EMAIL_FROM);
 }
 
-/**
- * Sends a single HTML mail via Gmail (service transport).
- * @param {{ to: string, subject: string, html: string }} opts
- */
 async function sendEmail({ to, subject, html }) {
-  try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: gmailPassNormalized(),
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      sender: {
+        name: APP_SENDER_NAME,
+        email: process.env.EMAIL_FROM,
       },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
     });
 
-    await transporter.sendMail({
-      from: `${APP_SENDER_NAME} <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
+    const options = {
+      hostname: "api.brevo.com",
+      path: "/v3/smtp/email",
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(payload),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = "";
+
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+
+      res.on("end", () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(data ? JSON.parse(data) : {});
+        } else {
+          reject(new Error(`Brevo API Error (${res.statusCode}): ${data}`));
+        }
+      });
     });
-  } catch (err) {
-    console.error('[sendEmail]', err.message || err);
-    throw err;
-  }
+
+    req.on("error", reject);
+    req.write(payload);
+    req.end();
+  });
 }
 
 module.exports = {
