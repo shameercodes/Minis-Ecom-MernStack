@@ -22,7 +22,7 @@ function normalizeForSmsE164Digits(digits) {
 }
 
 async function deliverSms(toDigitsNoPlus, body) {
-  const to = `+${toDigitsNoPlus.replace(/^\+/, '')}`;
+ const to = `+${toDigitsNoPlus.replace(/^\+/, "")}`;
   if (!smsSignupConfigured()) {
     console.warn('[sms] Twilio not configured; would SMS', to.slice(0, 6) + '…:', body.slice(0, 40) + '…');
     return;
