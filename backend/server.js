@@ -47,14 +47,7 @@ const cartRoutes = require('./routes/cartRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-console.log("[ROUTE CHECK]", {
-  authRoutes: typeof authRoutes,
-  productRoutes: typeof productRoutes,
-  orderRoutes: typeof orderRoutes,
-  cartRoutes: typeof cartRoutes,
-  contactRoutes: typeof contactRoutes,
-  adminRoutes: typeof adminRoutes,
-});
+
 const { registerOptionsHandler } = require('./handlers/registerOptionsHandler');
 const { emailConfigured } = require('./utils/sendVerificationEmail');
 const { smsSignupConfigured } = require('./utils/registerSms');
