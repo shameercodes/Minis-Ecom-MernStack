@@ -195,18 +195,21 @@ router.post(
 
 
           if (product.trackInventory) {
-            const result = await Product.updateOne(
-              {
-                _id: product._id,
-                isActive: true,
-                trackInventory: true,
-                stock: { $gte: item.quantity },
-              },
-              {
-                $inc: { stock: -item.quantity },
-              },
-              { session },
-            );
+const result = await Product.updateOne(
+  {
+    _id: product._id,
+    stock: { $gte: item.quantity },
+  },
+  {
+    $inc: { stock: -item.quantity },
+  },
+  { session },
+);
+
+console.log("STOCK UPDATE RESULT:", {
+  matchedCount: result.matchedCount,
+  modifiedCount: result.modifiedCount,
+});
 
 
 console.log("Stock update result:", {
