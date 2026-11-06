@@ -182,6 +182,18 @@ router.post(
             throw new Error("PRODUCT_NOT_FOUND");
           }
 
+
+
+                      console.log("========== STOCK DEBUG ==========");
+                      console.log("Product name:", product.name);
+                      console.log("Product ID:", product._id.toString());
+                      console.log("Database stock:", product.stock);
+                      console.log("Requested quantity:", item.quantity);
+                      console.log("Track inventory:", product.trackInventory);
+                      console.log("=================================");
+
+
+
           if (product.trackInventory) {
             const result = await Product.updateOne(
               {
@@ -195,6 +207,14 @@ router.post(
               },
               { session },
             );
+
+
+console.log("Stock update result:", {
+  matchedCount: result.matchedCount,
+  modifiedCount: result.modifiedCount,
+});
+
+
 
             if (result.modifiedCount !== 1) {
               throw new Error(`INSUFFICIENT_STOCK:${product.name}`);
