@@ -101,6 +101,7 @@ export const sendContact = (data) => API.post('/contact', data);
 
 // Admin
 export const getAdminStats = () => API.get('/admin/stats');
+export const getAdminLowStockProducts = () => API.get("/admin/inventory/low-stock");
 export const getAdminProducts = (params) => API.get('/admin/products', { params });
 export const createAdminProduct = (data) => API.post('/admin/products', data);
 export const updateAdminProduct = (id, data) => API.put(`/admin/products/${id}`, data);
