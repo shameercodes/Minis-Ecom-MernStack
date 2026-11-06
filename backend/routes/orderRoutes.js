@@ -216,9 +216,9 @@ console.log("Stock update result:", {
 
 
 
-            if (result.modifiedCount !== 1) {
-              throw new Error(`INSUFFICIENT_STOCK:${product.name}`);
-            }
+if (result.matchedCount !== 1) {
+  throw new Error(`INSUFFICIENT_STOCK:${product.name}`);
+}
           }
 
           const itemTotal = product.price * item.quantity;
