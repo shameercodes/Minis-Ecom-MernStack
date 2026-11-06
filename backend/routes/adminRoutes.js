@@ -77,6 +77,7 @@ router.get(
 
 
 
+
 // ─── LOW-STOCK INVENTORY ─────────────────────────────────────────────
 router.get(
   "/inventory/low-stock",
@@ -85,9 +86,18 @@ router.get(
   asyncHandler(async (req, res) => {
     const products = await Product.find({
       isActive: true,
-      trackInventory: true,
       $expr: {
-        $lte: ["$stock", "$lowStockThreshold"],
+        $and: [
+          {
+            $eq: [{ $ifNull: ["$trackInventory", true] }, true],
+          },
+          {
+            $lte: [
+              "$stock",
+              { $ifNull: ["$lowStockThreshold", 5] },
+            ],
+          },
+        ],
       },
     })
       .select("name slug images category price stock lowStockThreshold")
