@@ -75,6 +75,33 @@ router.get(
   }),
 );
 
+
+
+// ─── LOW-STOCK INVENTORY ─────────────────────────────────────────────
+router.get(
+  "/inventory/low-stock",
+  protect,
+  admin,
+  asyncHandler(async (req, res) => {
+    const products = await Product.find({
+      isActive: true,
+      trackInventory: true,
+      $expr: {
+        $lte: ["$stock", "$lowStockThreshold"],
+      },
+    })
+      .select("name slug images category price stock lowStockThreshold")
+      .sort({ stock: 1 });
+
+    res.json({
+      count: products.length,
+      products,
+    });
+  }),
+);
+
+
+
 // ─── PRODUCTS CRUD ────────────────────────────────────────────────────────────
 router.get(
   "/products",
