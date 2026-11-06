@@ -51,11 +51,12 @@ router.get(
       monthlyRevenue[key] = (monthlyRevenue[key] || 0) + o.totalPrice;
     });
 
-    const recentOrdersList = await Order.find()
-      .populate("user", "name email")
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select("_id totalPrice status createdAt user orderItems");
+const recentOrdersList = await Order.find()
+  .populate("user", "name email")
+  .populate("orderItems.product", "stock")
+  .sort({ createdAt: -1 })
+  .limit(5)
+  .select("_id totalPrice status createdAt user orderItems");
 
     res.json({
       totalRevenue,

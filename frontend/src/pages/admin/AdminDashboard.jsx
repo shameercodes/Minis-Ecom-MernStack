@@ -476,7 +476,7 @@ useEffect(() => {
                             </td>
                             <td className="px-3 py-3 text-center">
                               <span className="font-bold text-gray-700">
-                                {item.quantity * 10}
+                                {item.product?.stock ?? "N/A"}
                               </span>
                             </td>
                             <td className="px-3 py-3 text-center text-gray-500">
