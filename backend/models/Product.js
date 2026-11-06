@@ -7,30 +7,35 @@ const reviewSchema = new mongoose.Schema({
   comment: { type: String, required: true }
 }, { timestamps: true });
 
-const productSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  slug: { type: String, required: true, unique: true, lowercase: true },
-  description: { type: String, required: true },
-  price: { type: Number, required: true, min: 0 },
-  originalPrice: { type: Number, min: 0 },
-  category: {
-    type: String,
-    required: true,
-    enum: ['women', 'men', 'kids', 'accessories'],
-    lowercase: true
+const productSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    slug: { type: String, required: true, unique: true, lowercase: true },
+    description: { type: String, required: true },
+    price: { type: Number, required: true, min: 0 },
+    originalPrice: { type: Number, min: 0 },
+    category: {
+      type: String,
+      required: true,
+      enum: ["women", "men", "kids", "accessories"],
+      lowercase: true,
+    },
+    subcategory: { type: String, lowercase: true },
+    images: [{ type: String }],
+    sizes: [{ type: String }],
+    colors: [{ type: String }],
+    stock: { type: Number, required: true, default: 0, min: 0 },
+    trackInventory: { type: Boolean, default: true},
+    lowStockThreshold: { type: Number, default: 5, min: 0},
+    rating: { type: Number, default: 0 },
+    numReviews: { type: Number, default: 0 },
+    reviews: [reviewSchema],
+    featured: { type: Boolean, default: false },
+    tags: [{ type: String }],
+    isActive: { type: Boolean, default: true },
   },
-  subcategory: { type: String, lowercase: true },
-  images: [{ type: String }],
-  sizes: [{ type: String }],
-  colors: [{ type: String }],
-  stock: { type: Number, required: true, default: 0, min: 0 },
-  rating: { type: Number, default: 0 },
-  numReviews: { type: Number, default: 0 },
-  reviews: [reviewSchema],
-  featured: { type: Boolean, default: false },
-  tags: [{ type: String }],
-  isActive: { type: Boolean, default: true }
-}, { timestamps: true });
+  { timestamps: true },
+);
 
 // Virtual for discount percentage
 productSchema.virtual('discountPercent').get(function () {
