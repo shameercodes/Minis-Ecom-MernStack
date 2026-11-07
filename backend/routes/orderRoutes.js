@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
-const express = require('express');
+const mongoose = require("mongoose");
+const express = require("express");
 const router = express.Router();
-const asyncHandler = require('express-async-handler');
-const Order = require('../models/Order');
-const Product = require('../models/Product');
-const { protect, admin } = require('../middleware/auth');
+const asyncHandler = require("express-async-handler");
+const Order = require("../models/Order");
+const Product = require("../models/Product");
+const { protect, admin } = require("../middleware/auth");
 
 const NAME_RE = /^[A-Za-z\s]+$/;
 const PHONE_RE = /^[0-9]+$/;
@@ -55,8 +55,7 @@ function validateShippingAddress(addr) {
   if (!postalRaw) errors.postalCode = "Postal code is required";
   else if (/[^A-Z0-9\s-]/.test(postalRaw))
     errors.postalCode = "Invalid postal code characters";
-  else if (postalRaw.length > 15)
-    errors.postalCode = "Postal code is too long";
+  else if (postalRaw.length > 15) errors.postalCode = "Postal code is too long";
   else if (postalRaw.replace(/[\s-]/g, "").length < 3)
     errors.postalCode = "Postal code must have at least 3 letters or digits";
 
@@ -75,7 +74,7 @@ function validateShippingAddress(addr) {
 
 // POST /api/orders
 router.post(
-  '/',
+  "/",
   protect,
   asyncHandler(async (req, res) => {
     const {
@@ -182,46 +181,21 @@ router.post(
             throw new Error("PRODUCT_NOT_FOUND");
           }
 
-
-
-                      console.log("========== STOCK DEBUG ==========");
-                      console.log("Product name:", product.name);
-                      console.log("Product ID:", product._id.toString());
-                      console.log("Database stock:", product.stock);
-                      console.log("Requested quantity:", item.quantity);
-                      console.log("Track inventory:", product.trackInventory);
-                      console.log("=================================");
-
-
-
           if (product.trackInventory) {
-const result = await Product.updateOne(
-  {
-    _id: product._id,
-    stock: { $gte: item.quantity },
-  },
-  {
-    $inc: { stock: -item.quantity },
-  },
-  { session },
-);
+            const result = await Product.updateOne(
+              {
+                _id: product._id,
+                stock: { $gte: item.quantity },
+              },
+              {
+                $inc: { stock: -item.quantity },
+              },
+              { session },
+            );
 
-console.log("STOCK UPDATE RESULT:", {
-  matchedCount: result.matchedCount,
-  modifiedCount: result.modifiedCount,
-});
-
-
-console.log("Stock update result:", {
-  matchedCount: result.matchedCount,
-  modifiedCount: result.modifiedCount,
-});
-
-
-
-if (result.matchedCount !== 1) {
-  throw new Error(`INSUFFICIENT_STOCK:${product.name}`);
-}
+            if (result.matchedCount !== 1) {
+              throw new Error(`INSUFFICIENT_STOCK:${product.name}`);
+            }
           }
 
           const itemTotal = product.price * item.quantity;
@@ -278,9 +252,8 @@ if (result.matchedCount !== 1) {
     } finally {
       await session.endSession();
     }
-  })
+  }),
 );
-
 
 // GET /api/orders/:id - Get a single user's order
 router.get(
@@ -305,8 +278,7 @@ router.get(
 
     // Customers can only access their own orders.
     // Admins can access any order.
-    const isOwner =
-      order.user?._id.toString() === req.user._id.toString();
+    const isOwner = order.user?._id.toString() === req.user._id.toString();
 
     const isAdmin = req.user.role === "admin";
 
@@ -317,8 +289,7 @@ router.get(
     }
 
     res.json(order);
-  })
+  }),
 );
-
 
 module.exports = router;
