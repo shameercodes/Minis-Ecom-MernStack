@@ -5,6 +5,7 @@ const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const { protect, admin } = require("../middleware/auth");
+const { sendOrderConfirmationEmail } = require("../utils/sendVerificationEmail");
 
 const NAME_RE = /^[A-Za-z\s]+$/;
 const PHONE_RE = /^[0-9]+$/;
@@ -232,6 +233,19 @@ router.post(
         createdOrder = order;
       });
 
+      // Send order confirmation email after transaction commits
+      try {
+        await sendOrderConfirmationEmail({
+          to: req.user.email,
+          order: createdOrder,
+        });
+
+        console.log("[ORDER CONFIRMATION EMAIL] Sent successfully");
+      } catch (emailError) {
+        console.error("[ORDER CONFIRMATION EMAIL ERROR]", emailError.message);
+      }
+
+      // Return successful order response
       res.status(201).json(createdOrder);
     } catch (error) {
       if (error.message === "PRODUCT_NOT_FOUND") {
@@ -280,7 +294,7 @@ router.get(
     // Admins can access any order.
     const isOwner = order.user?._id.toString() === req.user._id.toString();
 
-    const isAdmin = req.user.role === "admin";
+    const isAdmin = req.user.isAdmin === true;
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
