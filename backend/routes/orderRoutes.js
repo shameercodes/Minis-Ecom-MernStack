@@ -281,4 +281,44 @@ if (result.matchedCount !== 1) {
   })
 );
 
+
+// GET /api/orders/:id - Get a single user's order
+router.get(
+  "/:id",
+  protect,
+  asyncHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid order ID",
+      });
+    }
+
+    const order = await Order.findById(req.params.id)
+      .populate("user", "name email")
+      .populate("orderItems.product", "name images");
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+
+    // Customers can only access their own orders.
+    // Admins can access any order.
+    const isOwner =
+      order.user?._id.toString() === req.user._id.toString();
+
+    const isAdmin = req.user.role === "admin";
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({
+        message: "Not authorized to access this order",
+      });
+    }
+
+    res.json(order);
+  })
+);
+
+
 module.exports = router;
