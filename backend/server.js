@@ -46,6 +46,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const couponRoutes = require("./routes/couponRoutes");
 
 
 const { registerOptionsHandler } = require('./handlers/registerOptionsHandler');
@@ -95,6 +96,7 @@ api.use('/orders', orderRoutes);
 api.use('/cart', cartRoutes);
 api.use('/contact', contactRoutes);
 api.use('/admin', adminRoutes);
+api.use("/coupons", couponRoutes);
 
 app.get('/', (req, res) => {
   res.send("MINIS API is running...");
@@ -113,11 +115,11 @@ app.use('/api', api);
 app.use(api);
 
 app.use((req, res) => {
-  const looksLikeApi =
-    req.path.startsWith('/api') ||
-    /^\/(auth|products|orders|contact|admin|cart|health|mail)(\/|$)/.test(
-      req.path,
-    );
+const looksLikeApi =
+  req.path.startsWith("/api") ||
+  /^\/?(auth|products|orders|contact|admin|coupons|health|mail)(\/|$)/.test(
+    req.path,
+  );
 
   if (looksLikeApi) {
     return res.status(404).json({

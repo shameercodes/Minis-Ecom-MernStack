@@ -4,8 +4,11 @@ const router = express.Router();
 const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
-const { protect, admin } = require("../middleware/auth");
-const { sendOrderConfirmationEmail } = require("../utils/sendVerificationEmail");
+const Coupon = require("../models/Coupon");
+const { protect } = require("../middleware/auth");
+const {
+  sendOrderConfirmationEmail,
+} = require("../utils/sendVerificationEmail");
 
 const NAME_RE = /^[A-Za-z\s]+$/;
 const PHONE_RE = /^[0-9]+$/;
@@ -85,6 +88,7 @@ router.post(
       shippingPrice = 0,
       taxPrice = 0,
       notes,
+      couponCode,
     } = req.body;
 
     if (!Array.isArray(orderItems) || orderItems.length === 0) {
@@ -213,8 +217,105 @@ router.post(
           });
         }
 
+        // Calculate coupon discount using trusted database prices
+        let discountAmount = 0;
+        let appliedCouponCode = null;
+
+        if (couponCode) {
+          const normalizedCode = String(couponCode).trim().toUpperCase();
+
+          const coupon = await Coupon.findOne({
+            code: normalizedCode,
+          }).session(session);
+
+          if (!coupon || !coupon.isActive) {
+            throw new Error("COUPON_ERROR:Invalid or inactive coupon");
+          }
+
+          const now = new Date();
+
+          if (coupon.expiresAt && coupon.expiresAt <= now) {
+            throw new Error("COUPON_ERROR:This coupon has expired");
+          }
+
+          if (
+            coupon.usageLimit !== null &&
+            coupon.usedCount >= coupon.usageLimit
+          ) {
+            throw new Error(
+              "COUPON_ERROR:This coupon has reached its usage limit",
+            );
+          }
+
+          const alreadyUsed = (coupon.usedBy || []).some(
+            (userId) => userId.toString() === req.user._id.toString(),
+          );
+
+          if (alreadyUsed) {
+            throw new Error("COUPON_ERROR:You have already used this coupon");
+          }
+
+          if (calculatedItemsPrice < coupon.minimumOrderAmount) {
+            throw new Error(
+              `COUPON_ERROR:Minimum order amount is Rs. ${coupon.minimumOrderAmount}`,
+            );
+          }
+
+          discountAmount =
+            coupon.discountType === "percentage"
+              ? (calculatedItemsPrice * coupon.discountValue) / 100
+              : coupon.discountValue;
+
+          if (coupon.maximumDiscount !== null) {
+            discountAmount = Math.min(discountAmount, coupon.maximumDiscount);
+          }
+
+          discountAmount = Math.min(discountAmount, calculatedItemsPrice);
+
+          discountAmount = Math.round(discountAmount * 100) / 100;
+
+          // Atomically record coupon usage inside the same transaction
+          const usageResult = await Coupon.updateOne(
+            {
+              _id: coupon._id,
+              isActive: true,
+              usedBy: { $ne: req.user._id },
+              $and: [
+                {
+                  $or: [
+                    { usageLimit: null },
+                    {
+                      $expr: {
+                        $lt: ["$usedCount", "$usageLimit"],
+                      },
+                    },
+                  ],
+                },
+                {
+                  $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
+                },
+              ],
+            },
+            {
+              $inc: { usedCount: 1 },
+              $addToSet: { usedBy: req.user._id },
+            },
+            { session },
+          );
+
+          if (usageResult.matchedCount !== 1) {
+            throw new Error(
+              "COUPON_ERROR:Coupon is no longer available. Please try another coupon",
+            );
+          }
+
+          appliedCouponCode = coupon.code;
+        }
+
+        const discountedItemsPrice = calculatedItemsPrice - discountAmount;
+
         const calculatedTotal =
-          calculatedItemsPrice + shippingAmount + taxAmount;
+          discountedItemsPrice + shippingAmount + taxAmount;
 
         const order = new Order({
           user: req.user._id,
@@ -224,6 +325,8 @@ router.post(
           itemsPrice: calculatedItemsPrice,
           shippingPrice: shippingAmount,
           taxPrice: taxAmount,
+          couponCode: appliedCouponCode,
+          discountAmount,
           totalPrice: calculatedTotal,
           notes,
         });
@@ -231,8 +334,7 @@ router.post(
         await order.save({ session });
 
         createdOrder = order;
-      });
-
+      }); // Close withTransaction here
       // Send order confirmation email after transaction commits
       try {
         await sendOrderConfirmationEmail({
@@ -246,8 +348,14 @@ router.post(
       }
 
       // Return successful order response
-      res.status(201).json(createdOrder);
+      return res.status(201).json(createdOrder);
     } catch (error) {
+      if (error.message.startsWith("COUPON_ERROR:")) {
+        return res.status(400).json({
+          message: error.message.replace("COUPON_ERROR:", ""),
+        });
+      }
+
       if (error.message === "PRODUCT_NOT_FOUND") {
         return res.status(400).json({
           message: "One or more products are unavailable",

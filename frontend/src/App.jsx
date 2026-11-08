@@ -37,6 +37,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminShipments from './pages/admin/AdminShipments';
 import AdminTransactions from './pages/admin/AdminTransactions';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminCoupons from "./pages/admin/AdminCoupons";
 
 export default function App() {
   return (
@@ -88,6 +89,7 @@ export default function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="shipments" element={<AdminShipments />} />
             <Route path="transactions" element={<AdminTransactions />} />
+            <Route path="coupons" element={<AdminCoupons />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
         </Route>

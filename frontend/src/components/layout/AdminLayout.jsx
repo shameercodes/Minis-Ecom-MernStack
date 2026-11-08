@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FiGrid, FiShoppingBag, FiPackage, FiUsers, FiLogOut, FiExternalLink, FiTruck, FiCreditCard, FiSettings, FiMenu, FiX } from 'react-icons/fi';
+import { FiGrid, FiShoppingBag, FiPackage, FiUsers, FiLogOut, FiExternalLink, FiTruck, FiCreditCard, FiSettings, FiMenu, FiX, FiTag } from 'react-icons/fi';
 
 const navLinks = [
   { to: '/admin', label: 'Dashboard', icon: FiGrid, end: true },
@@ -10,6 +10,7 @@ const navLinks = [
   { to: '/admin/orders', label: 'Orders', icon: FiPackage },
   { to: '/admin/shipments', label: 'Shipments', icon: FiTruck },
   { to: '/admin/transactions', label: 'Transactions', icon: FiCreditCard },
+  { to: '/admin/coupons', label: 'Coupons', icon: FiTag },
   { to: '/admin/settings', label: 'Settings', icon: FiSettings },
 ];
 

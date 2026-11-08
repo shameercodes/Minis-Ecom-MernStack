@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createOrder } from "../utils/api";
+import { createOrder, validateCoupon } from "../utils/api";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -107,6 +107,11 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState(emptyErrors);
 
+  // Coupon states
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const [form, setForm] = useState({
     fullName: user?.name || "",
     address: user?.address?.street || "",
@@ -118,9 +123,56 @@ export default function CheckoutPage() {
     notes: "",
   });
 
-  const shipping = cartTotal >= 5000 ? 0 : 299;
-  const tax = Math.round(cartTotal * 0.05);
-  const total = cartTotal + shipping + tax;
+const shipping = cartTotal >= 5000 ? 0 : 299;
+const tax = Math.round(cartTotal * 0.05);
+
+// Only use the coupon if it was validated for the current cart subtotal
+const isCouponValidForCart =
+  appliedCoupon && Number(appliedCoupon.itemsPrice) === Number(cartTotal);
+
+const discount = isCouponValidForCart
+  ? Number(appliedCoupon.discountAmount)
+  : 0;
+
+const total = cartTotal - discount + shipping + tax;
+
+// Apply coupon
+const handleApplyCoupon = async () => {
+  const code = couponInput.trim().toUpperCase();
+
+  if (!code) {
+    return toast.error("Please enter a coupon code");
+  }
+
+  if (cartItems.length === 0) {
+    return toast.error("Your cart is empty");
+  }
+
+  setCouponLoading(true);
+
+  try {
+    const { data } = await validateCoupon({
+      code,
+      itemsPrice: cartTotal,
+    });
+
+    setAppliedCoupon(data);
+    setCouponInput(data.code || code);
+
+    toast.success(data.message || "Coupon applied successfully!");
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Unable to apply coupon");
+  } finally {
+    setCouponLoading(false);
+  }
+};
+
+// Remove coupon
+const handleRemoveCoupon = () => {
+  setAppliedCoupon(null);
+  setCouponInput("");
+  toast.success("Coupon removed");
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -141,7 +193,10 @@ export default function CheckoutPage() {
     } else if (name === "postalCode") {
       setForm((f) => ({
         ...f,
-        postalCode: value.replace(/[^a-zA-Z0-9\s\-]/g, "").toUpperCase().slice(0, 15),
+        postalCode: value
+          .replace(/[^a-zA-Z0-9\s\-]/g, "")
+          .toUpperCase()
+          .slice(0, 15),
       }));
     } else if (name === "country") {
       setForm((f) => ({
@@ -192,6 +247,9 @@ export default function CheckoutPage() {
         taxPrice: tax,
         totalPrice: total,
         notes: form.notes,
+
+        // Coupon integration
+        couponCode: isCouponValidForCart ? appliedCoupon.code : undefined,
       };
 
       const { data } = await createOrder(orderData);
@@ -281,7 +339,7 @@ export default function CheckoutPage() {
                 />
               </div>
             </div>
-
+</div>
             {/* Payment */}
             <div className="border border-gray-200 p-6">
               <h2 className="font-semibold text-lg mb-5">Payment Method</h2>
@@ -367,28 +425,101 @@ export default function CheckoutPage() {
               </div>
 
               <div className="border-t pt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>PKR {cartTotal.toLocaleString()}</span>
-                </div>
+                {/* Coupon Section */}
+                <div className="border-t border-gray-200 pt-4 mb-4">
+                  <h3 className="font-semibold text-sm mb-3">Apply Coupon</h3>
 
-                <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span className={shipping === 0 ? "text-green-600" : ""}>
-                    {shipping === 0 ? "FREE" : `PKR ${shipping}`}
-                  </span>
-                </div>
+                  {!appliedCoupon ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponInput}
+                        onChange={(e) =>
+                          setCouponInput(e.target.value.toUpperCase())
+                        }
+                        placeholder="Enter coupon code"
+                        className="input-field min-w-0 flex-1 uppercase"
+                        disabled={couponLoading || loading || cartItems.length === 0}
+                      />
 
-                <div className="flex justify-between">
-                  <span>Tax</span>
-                  <span>PKR {tax.toLocaleString()}</span>
-                </div>
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={
+                          couponLoading || loading || !couponInput.trim()
+                        }
+                        className="btn-dark px-4 text-sm disabled:opacity-50"
+                      >
+                        {couponLoading ? "Applying..." : "Apply"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border border-green-200 bg-green-50 p-3 rounded">
+                      <div className="flex justify-between items-center gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-green-700">
+                            {appliedCoupon.code}
+                          </p>
+                            <p className="text-xs text-green-600">
+                              {isCouponValidForCart
+                                ? "Coupon applied successfully"
+                                : "Cart changed. Reapply your coupon."}
+                            </p>
 
-                <div className="border-t pt-2 flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>PKR {total.toLocaleString()}</span>
+                              {!isCouponValidForCart && (
+                                <button
+                                  type="button"
+                                  onClick={handleApplyCoupon}
+                                  disabled={couponLoading || loading || cartItems.length === 0}
+                                  className="text-xs text-blue-600 font-medium hover:underline mt-2"
+                                >
+                                  {couponLoading ? "Applying..." : "Reapply Coupon"}
+                                </button>
+                              )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          disabled={loading}
+                          className="text-xs text-red-600 font-medium hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+<div className="border-t pt-4 space-y-3 text-sm">
+  <div className="flex justify-between">
+    <span>Subtotal</span>
+    <span>PKR {cartTotal.toLocaleString()}</span>
+  </div>
+
+  <div className="flex justify-between">
+    <span>Shipping</span>
+    <span className={shipping === 0 ? "text-green-600" : ""}>
+      {shipping === 0 ? "FREE" : `PKR ${shipping}`}
+    </span>
+  </div>
+
+  <div className="flex justify-between">
+    <span>Tax</span>
+    <span>PKR {tax.toLocaleString()}</span>
+  </div>
+
+  {discount > 0 && (
+    <div className="flex justify-between text-green-600">
+      <span>Coupon Discount ({appliedCoupon.code})</span>
+      <span>- PKR {discount.toLocaleString()}</span>
+    </div>
+  )}
+
+  <div className="border-t pt-3 flex justify-between font-bold text-base">
+    <span>Total</span>
+    <span>PKR {total.toLocaleString()}</span>
+  </div>
+</div>
 
               <button
                 type="submit"

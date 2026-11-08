@@ -96,6 +96,19 @@ export const createOrder = (data) => API.post('/orders', data);
 export const getMyOrders = () => API.get('/orders/my');
 export const getOrder = (id) => API.get(`/orders/${id}`);
 
+// Coupons
+export const validateCoupon = (data) => API.post('/coupons/validate', data);
+
+// Admin Coupons
+export const getAdminCoupons = () => API.get('/coupons');
+
+export const createAdminCoupon = (data) => API.post('/coupons', data);
+
+export const updateAdminCoupon = (id, data) =>
+  API.patch(`/coupons/${id}`, data);
+
+export const deleteAdminCoupon = (id) => API.delete(`/coupons/${id}`);
+
 // Contact
 export const sendContact = (data) => API.post('/contact', data);
 
