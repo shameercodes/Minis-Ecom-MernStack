@@ -39,7 +39,7 @@ router.get(
       ],
     })
       .select(
-        "code description discountType discountValue minimumOrderAmount maximumDiscount expiresAt",
+        "code description discountType discountValue minimumOrderAmount maximumDiscount expiresAt featuredOnHome",
       )
       .sort({ createdAt: -1 })
       .lean();
@@ -64,6 +64,7 @@ router.post(
       usageLimit,
       expiresAt,
       showOnStore,
+      featuredOnHome,
     } = req.body;
 
     if (!code || !String(code).trim()) {
@@ -103,6 +104,7 @@ router.post(
       discountValue: value,
       minimumOrderAmount: Number(minimumOrderAmount) || 0,
       showOnStore: showOnStore === true,
+      featuredOnHome: featuredOnHome === true,
       maximumDiscount:
         maximumDiscount === null ||
         maximumDiscount === undefined ||
@@ -215,6 +217,7 @@ router.patch(
       "description",
       "isActive",
       "showOnStore",
+      "featuredOnHome",
       "minimumOrderAmount",
       "maximumDiscount",
       "usageLimit",

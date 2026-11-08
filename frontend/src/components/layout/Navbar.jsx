@@ -124,6 +124,7 @@ export default function Navbar() {
               </div>
             ))}
             <Link to="/sale" className="px-3 py-7 text-sm font-bold tracking-wider uppercase text-primary-600 hover:text-primary-800 transition-colors">Sale</Link>
+            <Link to="/offers" className="px-3 py-7 text-sm font-bold tracking-wider uppercase text-primary-700 hover:text-primary-900 transition-colors" > Offers </Link>
             <Link to="/blog" className="px-3 py-7 text-sm font-medium tracking-wider uppercase hover:text-primary-600 transition-colors">Blog</Link>
             <Link to="/about" className="px-3 py-7 text-sm font-medium tracking-wider uppercase hover:text-primary-600 transition-colors">About</Link>
           </nav>
@@ -228,7 +229,8 @@ export default function Navbar() {
               </div>
             </div>
           ))}
-          <Link to="/sale" className="block px-6 py-3.5 font-bold border-b border-gray-50 uppercase text-sm tracking-wider text-primary-600">Sale</Link>
+        <Link to="/sale" className="block px-6 py-3.5 font-bold border-b border-gray-50 uppercase text-sm tracking-wider text-primary-600">Sale</Link>
+        <Link to="/offers" className="block px-6 py-3.5 font-bold border-b border-gray-50 uppercase text-sm tracking-wider text-primary-700" > Offers </Link>
           <Link to="/blog" className="block px-6 py-3.5 font-medium border-b border-gray-50 uppercase text-sm tracking-wider">Blog</Link>
           <Link to="/about" className="block px-6 py-3.5 font-medium border-b border-gray-50 uppercase text-sm tracking-wider">About</Link>
           <Link to="/contact" className="block px-6 py-3.5 font-medium border-b border-gray-50 uppercase text-sm tracking-wider">Contact</Link>

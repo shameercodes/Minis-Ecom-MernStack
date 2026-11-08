@@ -74,6 +74,12 @@ const couponSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // Controls whether this coupon appears in the homepage offers section
+    featuredOnHome: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );

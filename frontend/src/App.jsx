@@ -28,6 +28,7 @@ import OrderDetailPage from './pages/OrderDetailPage';
 import ContactPage from './pages/ContactPage';
 import WishlistPage from './pages/WishlistPage';
 import NotFoundPage from './pages/NotFoundPage';
+import Offers from "./pages/Offers";
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -47,6 +48,7 @@ export default function App() {
         {/* ── Store Routes ── */}
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
+          <Route path="offers" element={<Offers />} />
 
           {/* Category landing pages (with dropdown subcategories) */}
           <Route path="shop/women" element={<WomenPage />} />

@@ -30,6 +30,7 @@ const EMPTY = {
   expiresAt: "",
   isActive: true,
   showOnStore: false,
+  featuredOnHome: false,
 };
 
 function Spinner() {
@@ -107,6 +108,7 @@ export default function AdminCoupons() {
         : "",
       isActive: coupon.isActive,
       showOnStore: coupon.showOnStore ?? false,
+      featuredOnHome: coupon.featuredOnHome ?? false,
     });
 
     setModalOpen(true);
@@ -180,6 +182,7 @@ export default function AdminCoupons() {
             : null,
           isActive: form.isActive,
           showOnStore: form.showOnStore,
+          featuredOnHome: form.featuredOnHome,
         };
 
         await updateAdminCoupon(editing._id, payload);
@@ -198,6 +201,7 @@ export default function AdminCoupons() {
             ? new Date(`${form.expiresAt}T23:59:59`).toISOString()
             : null,
           showOnStore: form.showOnStore,
+          featuredOnHome: form.featuredOnHome,
         };
 
         await createAdminCoupon(payload);
@@ -686,6 +690,30 @@ export default function AdminCoupons() {
                   >
                     Show this coupon on the public store
                   </label>
+                </div>
+                <div className="sm:col-span-2 flex items-start gap-3">
+                  <input
+                    id="coupon-featured-home"
+                    type="checkbox"
+                    checked={form.featuredOnHome}
+                    onChange={(e) => set("featuredOnHome", e.target.checked)}
+                    className="w-4 h-4 mt-0.5 accent-amber-400"
+                  />
+
+                  <div>
+                    <label
+                      htmlFor="coupon-featured-home"
+                      className="text-sm font-medium text-gray-600 cursor-pointer"
+                    >
+                      Feature this coupon on the homepage
+                    </label>
+
+                    <p className="text-xs text-gray-400 mt-1">
+                      Featured coupons must also be enabled for the public
+                      store. Only the 3 newest eligible featured coupons will
+                      appear.
+                    </p>
+                  </div>
                 </div>
               </div>
 
