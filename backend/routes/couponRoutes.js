@@ -16,6 +16,38 @@ router.get(
   }),
 );
 
+// GET /api/coupons/public - Customer: get available public coupons
+router.get(
+  "/public",
+  asyncHandler(async (req, res) => {
+    const now = new Date();
+
+    const coupons = await Coupon.find({
+      isActive: true,
+      showOnStore: true,
+
+      $and: [
+        {
+          $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
+        },
+        {
+          $or: [
+            { usageLimit: null },
+            { $expr: { $lt: ["$usedCount", "$usageLimit"] } },
+          ],
+        },
+      ],
+    })
+      .select(
+        "code description discountType discountValue minimumOrderAmount maximumDiscount expiresAt",
+      )
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(coupons);
+  }),
+);
+
 // POST /api/coupons - Admin: create coupon
 router.post(
   "/",
@@ -31,6 +63,7 @@ router.post(
       maximumDiscount,
       usageLimit,
       expiresAt,
+      showOnStore,
     } = req.body;
 
     if (!code || !String(code).trim()) {
@@ -69,6 +102,7 @@ router.post(
       discountType,
       discountValue: value,
       minimumOrderAmount: Number(minimumOrderAmount) || 0,
+      showOnStore: showOnStore === true,
       maximumDiscount:
         maximumDiscount === null ||
         maximumDiscount === undefined ||
@@ -123,9 +157,9 @@ router.post(
       });
     }
 
-const alreadyUsed = (coupon.usedBy || []).some(
-  (userId) => userId.toString() === req.user._id.toString(),
-);
+    const alreadyUsed = (coupon.usedBy || []).some(
+      (userId) => userId.toString() === req.user._id.toString(),
+    );
 
     if (alreadyUsed) {
       return res.status(400).json({
@@ -180,6 +214,7 @@ router.patch(
     const allowedFields = [
       "description",
       "isActive",
+      "showOnStore",
       "minimumOrderAmount",
       "maximumDiscount",
       "usageLimit",

@@ -29,6 +29,7 @@ const EMPTY = {
   usageLimit: "",
   expiresAt: "",
   isActive: true,
+  showOnStore: false,
 };
 
 function Spinner() {
@@ -105,6 +106,7 @@ export default function AdminCoupons() {
         ? new Date(coupon.expiresAt).toISOString().slice(0, 10)
         : "",
       isActive: coupon.isActive,
+      showOnStore: coupon.showOnStore ?? false,
     });
 
     setModalOpen(true);
@@ -177,6 +179,7 @@ export default function AdminCoupons() {
             ? new Date(`${form.expiresAt}T23:59:59`).toISOString()
             : null,
           isActive: form.isActive,
+          showOnStore: form.showOnStore,
         };
 
         await updateAdminCoupon(editing._id, payload);
@@ -194,6 +197,7 @@ export default function AdminCoupons() {
           expiresAt: form.expiresAt
             ? new Date(`${form.expiresAt}T23:59:59`).toISOString()
             : null,
+          showOnStore: form.showOnStore,
         };
 
         await createAdminCoupon(payload);
@@ -664,6 +668,23 @@ export default function AdminCoupons() {
                     className="text-sm font-medium text-gray-600 cursor-pointer"
                   >
                     Coupon is active
+                  </label>
+                </div>
+
+                <div className="sm:col-span-2 flex items-center gap-3">
+                  <input
+                    id="coupon-show-on-store"
+                    type="checkbox"
+                    checked={form.showOnStore}
+                    onChange={(e) => set("showOnStore", e.target.checked)}
+                    className="w-4 h-4 accent-amber-400"
+                  />
+
+                  <label
+                    htmlFor="coupon-show-on-store"
+                    className="text-sm font-medium text-gray-600 cursor-pointer"
+                  >
+                    Show this coupon on the public store
                   </label>
                 </div>
               </div>

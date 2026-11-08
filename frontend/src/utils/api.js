@@ -99,6 +99,9 @@ export const getOrder = (id) => API.get(`/orders/${id}`);
 // Coupons
 export const validateCoupon = (data) => API.post('/coupons/validate', data);
 
+// Public Coupons - Customer-facing offers
+export const getPublicCoupons = () => API.get('/coupons/public');
+
 // Admin Coupons
 export const getAdminCoupons = () => API.get('/coupons');
 

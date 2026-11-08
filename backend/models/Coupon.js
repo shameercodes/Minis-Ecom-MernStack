@@ -68,6 +68,12 @@ const couponSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // Controls whether customers can see this coupon on the store
+    showOnStore: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );
