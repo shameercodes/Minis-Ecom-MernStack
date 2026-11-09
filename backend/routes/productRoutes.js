@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const asyncHandler = require('express-async-handler');
 const Product = require('../models/Product');
+const Order = require("../models/Order");
 const { protect, admin } = require('../middleware/auth');
 
 // GET /api/products — list with filters
@@ -63,22 +64,186 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/products/:id/reviews
-router.post('/:id/reviews', protect, asyncHandler(async (req, res) => {
-  const { rating, comment } = req.body;
-  const product = await Product.findById(req.params.id);
-  if (!product) return res.status(404).json({ message: 'Product not found' });
+router.post(
+  "/:id/reviews",
+  protect,
+  asyncHandler(async (req, res) => {
+    const { rating, comment } = req.body;
 
-  const alreadyReviewed = product.reviews.find(r => r.user.toString() === req.user._id.toString());
-  if (alreadyReviewed) return res.status(400).json({ message: 'Already reviewed' });
+    // Validate rating
+    const numericRating = Number(rating);
 
-  const review = { user: req.user._id, name: req.user.name, rating: Number(rating), comment };
-  product.reviews.push(review);
-  product.numReviews = product.reviews.length;
-  product.rating = product.reviews.reduce((acc, r) => acc + r.rating, 0) / product.reviews.length;
-  await product.save();
+    if (
+      !Number.isInteger(numericRating) ||
+      numericRating < 1 ||
+      numericRating > 5
+    ) {
+      return res.status(400).json({
+        message: "Rating must be a whole number between 1 and 5",
+      });
+    }
 
-  res.status(201).json({ message: 'Review added' });
-}));
+    // Validate comment
+    if (typeof comment !== "string" || !comment.trim()) {
+      return res.status(400).json({
+        message: "Review comment is required",
+      });
+    }
+
+    if (comment.trim().length > 1000) {
+      return res.status(400).json({
+        message: "Review cannot exceed 1000 characters",
+      });
+    }
+
+    const product = await Product.findById(req.params.id);
+
+    if (!product || !product.isActive) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
+    
+
+    // Prevent duplicate reviews
+    const alreadyReviewed = product.reviews.find(
+      (review) => review.user.toString() === req.user._id.toString(),
+    );
+
+    if (alreadyReviewed) {
+      return res.status(400).json({
+        message: "You have already reviewed this product",
+      });
+    }
+
+    // Verify that the user purchased and received this product
+    const verifiedOrder = await Order.exists({
+      user: req.user._id,
+      status: "delivered",
+      isDelivered: true,
+      "orderItems.product": product._id,
+    });
+
+    if (!verifiedOrder) {
+      return res.status(403).json({
+        message: "You can review this product only after receiving your order",
+      });
+    }
+
+    // Save verified review
+    product.reviews.push({
+      user: req.user._id,
+      name: req.user.name,
+      rating: numericRating,
+      comment: comment.trim(),
+      isVerifiedPurchase: true,
+    });
+
+    // Update average rating
+    product.numReviews = product.reviews.length;
+
+    const averageRating =
+      product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+      product.reviews.length;
+
+    product.rating = Math.round(averageRating * 10) / 10;
+
+    await product.save();
+
+    res.status(201).json({
+      message: "Verified review added successfully",
+      rating: product.rating,
+      numReviews: product.numReviews,
+    });
+  }),
+);
+
+
+
+// PUT /api/products/:id/reviews
+router.put(
+  "/:id/reviews",
+  protect,
+  asyncHandler(async (req, res) => {
+    const { rating, comment } = req.body;
+
+    const numericRating = Number(rating);
+
+    if (
+      !Number.isInteger(numericRating) ||
+      numericRating < 1 ||
+      numericRating > 5
+    ) {
+      return res.status(400).json({
+        message: "Rating must be a whole number between 1 and 5",
+      });
+    }
+
+    if (typeof comment !== "string" || !comment.trim()) {
+      return res.status(400).json({
+        message: "Review comment is required",
+      });
+    }
+
+    if (comment.trim().length > 1000) {
+      return res.status(400).json({
+        message: "Review cannot exceed 1000 characters",
+      });
+    }
+
+    const product = await Product.findById(req.params.id);
+
+    if (!product || !product.isActive) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
+
+    const existingReview = product.reviews.find(
+      (review) => review.user.toString() === req.user._id.toString(),
+    );
+
+    if (!existingReview) {
+      return res.status(404).json({
+        message: "You have not reviewed this product yet",
+      });
+    }
+
+    // Confirm the customer still has a delivered order for this product
+    const verifiedOrder = await Order.exists({
+      user: req.user._id,
+      status: "delivered",
+      isDelivered: true,
+      "orderItems.product": product._id,
+    });
+
+    if (!verifiedOrder) {
+      return res.status(403).json({
+        message: "Only verified customers can edit this review",
+      });
+    }
+
+    existingReview.rating = numericRating;
+    existingReview.comment = comment.trim();
+
+    product.numReviews = product.reviews.length;
+
+    const averageRating =
+      product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+      product.reviews.length;
+
+    product.rating = Math.round(averageRating * 10) / 10;
+
+    await product.save();
+
+    res.json({
+      message: "Review updated successfully",
+      rating: product.rating,
+      numReviews: product.numReviews,
+    });
+  }),
+);
+
 
 // Admin: POST /api/products
 router.post('/', protect, admin, asyncHandler(async (req, res) => {

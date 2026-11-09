@@ -63,7 +63,12 @@ API.interceptors.request.use((config) => {
 export const getProducts = (params) => API.get('/products', { params });
 export const getFeaturedProducts = () => API.get('/products/featured');
 export const getProduct = (id) => API.get(`/products/${id}`);
-export const addReview = (id, data) => API.post(`/products/${id}/reviews`, data);
+
+export const addReview = (id, data) =>
+  API.post(`/products/${id}/reviews`, data);
+
+export const updateReview = (id, data) =>
+  API.put(`/products/${id}/reviews`, data);
 
 // Auth
 export const loginUser = (data) => API.post('/auth/login', data);

@@ -9,7 +9,7 @@ import {
   FiShare2,
   FiStar,
 } from "react-icons/fi";
-import { getProduct, addReview, getProducts } from "../utils/api";
+import { getProduct, addReview, updateReview, getProducts } from "../utils/api";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useAuth } from "../context/AuthContext";
@@ -28,12 +28,20 @@ export default function ProductDetailPage() {
   const [related, setRelated] = useState([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [isEditingReview, setIsEditingReview] = useState(false);
   const { addToCart } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const { user } = useAuth();
 
+  const currentUserReview = product?.reviews?.find(
+    (review) =>
+      String(review.user?._id || review.user) === String(user?._id || user?.id),
+  );
+
   useEffect(() => {
     setLoading(true);
+    setIsEditingReview(false);
+    setReviewForm({ rating: 5, comment: "" });
     getProduct(slug)
       .then(({ data }) => {
         setProduct(data);
@@ -112,22 +120,33 @@ export default function ProductDetailPage() {
     addToCart(product, qty, selectedSize, selectedColor);
   };
 
-  const handleReview = async (e) => {
-    e.preventDefault();
-    if (!user) return toast.error("Please login to leave a review");
-    setReviewLoading(true);
-    try {
+const handleReview = async (e) => {
+  e.preventDefault();
+
+  if (!user) return toast.error("Please login to leave a review");
+
+  setReviewLoading(true);
+
+  try {
+    if (isEditingReview) {
+      await updateReview(product._id, reviewForm);
+      toast.success("Review updated successfully!");
+    } else {
       await addReview(product._id, reviewForm);
-      toast.success("Review submitted!");
-      const { data } = await getProduct(slug);
-      setProduct(data);
-      setReviewForm({ rating: 5, comment: "" });
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Review failed");
-    } finally {
-      setReviewLoading(false);
+      toast.success("Review submitted successfully!");
     }
-  };
+
+    const { data } = await getProduct(slug);
+
+    setProduct(data);
+    setReviewForm({ rating: 5, comment: "" });
+    setIsEditingReview(false);
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Review failed");
+  } finally {
+    setReviewLoading(false);
+  }
+};
 
   return (
     <div className="animate-fade-in">
@@ -351,14 +370,43 @@ export default function ProductDetailPage() {
               ) : (
                 product.reviews.map((r) => (
                   <div key={r._id} className="border-b border-gray-100 pb-5">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-sm">{r.name}</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{r.name}</span>
+
+                        {r.isVerifiedPurchase && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 font-medium">
+                            ✓ Verified Purchase
+                          </span>
+                        )}
+                      </div>
+
                       <span className="text-xs text-gray-400">
                         {new Date(r.createdAt).toLocaleDateString()}
                       </span>
                     </div>
+
                     <StarRating rating={r.rating} />
+
                     <p className="text-sm text-gray-600 mt-2">{r.comment}</p>
+
+                    {user &&
+                      String(r.user?._id || r.user) ===
+                        String(user._id || user.id) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReviewForm({
+                              rating: r.rating,
+                              comment: r.comment,
+                            });
+                            setIsEditingReview(true);
+                          }}
+                          className="text-sm text-primary-600 font-medium mt-3 hover:underline"
+                        >
+                          Edit Review
+                        </button>
+                      )}
                   </div>
                 ))
               )}
@@ -366,7 +414,10 @@ export default function ProductDetailPage() {
 
             {/* Review form */}
             <div>
-              <h3 className="font-semibold mb-4">Write a Review</h3>
+              <h3 className="font-semibold mb-4">
+                {isEditingReview ? "Edit Your Review" : "Write a Review"}
+              </h3>
+
               {!user ? (
                 <p className="text-sm text-gray-500">
                   <Link to="/login" className="text-primary-600 font-medium">
@@ -374,12 +425,33 @@ export default function ProductDetailPage() {
                   </Link>{" "}
                   to leave a review
                 </p>
+              ) : currentUserReview && !isEditingReview ? (
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-600">
+                    You have already reviewed this product.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReviewForm({
+                        rating: currentUserReview.rating,
+                        comment: currentUserReview.comment,
+                      });
+                      setIsEditingReview(true);
+                    }}
+                    className="text-sm text-primary-600 font-medium mt-2 hover:underline"
+                  >
+                    Edit Your Review
+                  </button>
+                </div>
               ) : (
                 <form onSubmit={handleReview} className="space-y-4">
                   <div>
                     <label className="text-sm font-medium block mb-1">
                       Rating
                     </label>
+
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <button
@@ -404,10 +476,12 @@ export default function ProductDetailPage() {
                       ))}
                     </div>
                   </div>
+
                   <div>
                     <label className="text-sm font-medium block mb-1">
                       Comment
                     </label>
+
                     <textarea
                       value={reviewForm.comment}
                       onChange={(e) =>
@@ -417,18 +491,46 @@ export default function ProductDetailPage() {
                         }))
                       }
                       rows={4}
+                      maxLength={1000}
                       required
                       placeholder="Share your experience..."
                       className="input-field resize-none"
                     />
+
+                    <p className="text-xs text-gray-400 mt-1">
+                      Maximum 1000 characters.
+                    </p>
                   </div>
-                  <button
-                    type="submit"
-                    disabled={reviewLoading}
-                    className="btn-primary disabled:opacity-50"
-                  >
-                    {reviewLoading ? "Submitting..." : "Submit Review"}
-                  </button>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      disabled={reviewLoading}
+                      className="btn-primary disabled:opacity-50"
+                    >
+                      {reviewLoading
+                        ? isEditingReview
+                          ? "Saving..."
+                          : "Submitting..."
+                        : isEditingReview
+                          ? "Save Changes"
+                          : "Submit Review"}
+                    </button>
+
+                    {isEditingReview && (
+                      <button
+                        type="button"
+                        disabled={reviewLoading}
+                        onClick={() => {
+                          setIsEditingReview(false);
+                          setReviewForm({ rating: 5, comment: "" });
+                        }}
+                        className="px-4 py-2 border border-gray-300 text-sm hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </form>
               )}
             </div>

@@ -377,6 +377,19 @@ router.post(
   }),
 );
 
+// GET /api/orders/my - Get logged-in customer's orders
+router.get(
+  "/my",
+  protect,
+  asyncHandler(async (req, res) => {
+    const orders = await Order.find({
+      user: req.user._id,
+    }).sort({ createdAt: -1 });
+
+    res.json(orders);
+  }),
+);
+
 // GET /api/orders/:id - Get a single user's order
 router.get(
   "/:id",
