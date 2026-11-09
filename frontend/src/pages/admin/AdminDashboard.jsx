@@ -1,18 +1,25 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  FiShoppingCart, FiUsers, FiPackage, FiTrendingUp,
-  FiArrowRight, FiMoreVertical, FiSliders, FiBell, FiSearch
-} from 'react-icons/fi';
+  FiShoppingCart,
+  FiUsers,
+  FiPackage,
+  FiTrendingUp,
+  FiArrowRight,
+  FiMoreVertical,
+  FiSliders,
+  FiBell,
+  FiSearch,
+} from "react-icons/fi";
 import { getAdminStats, getAdminLowStockProducts } from "../../utils/api";
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from "../../context/AuthContext";
 
 const STATUS_COLORS = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  processing: 'bg-blue-100 text-blue-700',
-  shipped: 'bg-purple-100 text-purple-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
+  pending: "bg-yellow-100 text-yellow-700",
+  processing: "bg-blue-100 text-blue-700",
+  shipped: "bg-purple-100 text-purple-700",
+  delivered: "bg-green-100 text-green-700",
+  cancelled: "bg-red-100 text-red-700",
 };
 
 function CircleProgress({ percent, color, size = 80 }) {
@@ -20,14 +27,26 @@ function CircleProgress({ percent, color, size = 80 }) {
   const circ = 2 * Math.PI * r;
   const offset = circ - (percent / 100) * circ;
   return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f0f0f0" strokeWidth={6} />
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle
-        cx={size/2} cy={size/2} r={r} fill="none"
-        stroke={color} strokeWidth={6}
-        strokeDasharray={circ} strokeDashoffset={offset}
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="#f0f0f0"
+        strokeWidth={6}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={6}
+        strokeDasharray={circ}
+        strokeDashoffset={offset}
         strokeLinecap="round"
-        style={{ transition: 'stroke-dashoffset 1s ease' }}
+        style={{ transition: "stroke-dashoffset 1s ease" }}
       />
     </svg>
   );
@@ -36,12 +55,18 @@ function CircleProgress({ percent, color, size = 80 }) {
 function StatMiniCard({ icon: Icon, label, value, color }) {
   return (
     <div className="flex items-center gap-2 sm:gap-3 bg-white rounded-xl px-3 sm:px-4 py-3 shadow-sm border border-gray-100 min-w-0">
-      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
+      <div
+        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}
+      >
         <Icon size={16} className="text-white" />
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] sm:text-xs text-gray-400 font-medium truncate">{label}</p>
-        <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">{value}</p>
+        <p className="text-[10px] sm:text-xs text-gray-400 font-medium truncate">
+          {label}
+        </p>
+        <p className="text-xs sm:text-sm font-bold text-gray-800 truncate">
+          {value}
+        </p>
       </div>
     </div>
   );
@@ -51,55 +76,103 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchVal, setSearchVal] = useState('');
+  const [searchVal, setSearchVal] = useState("");
 
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [lowStockLoading, setLowStockLoading] = useState(true);
   const [lowStockError, setLowStockError] = useState("");
 
-useEffect(() => {
-  getAdminStats()
-    .then(({ data }) => setStats(data))
-    .catch(console.error)
-    .finally(() => setLoading(false));
+  useEffect(() => {
+    let requestId = 0;
 
-  getAdminLowStockProducts()
-    .then(({ data }) => {
-      setLowStockProducts(data.products || []);
-      setLowStockError("");
-    })
-    .catch((error) => {
-      console.error("Low-stock fetch error:", error);
-      setLowStockError(
-        error.response?.data?.message || "Unable to load inventory alerts.",
-      );
-    })
-    .finally(() => setLowStockLoading(false));
-}, []);
+    const fetchDashboardData = async () => {
+      const currentRequest = ++requestId;
+
+      try {
+        const { data } = await getAdminStats();
+
+        if (currentRequest === requestId) {
+          setStats(data);
+        }
+      } catch (error) {
+        if (currentRequest === requestId) {
+          console.error("Dashboard stats error:", error);
+        }
+      } finally {
+        if (currentRequest === requestId) {
+          setLoading(false);
+        }
+      }
+
+      try {
+        const { data } = await getAdminLowStockProducts();
+
+        if (currentRequest === requestId) {
+          setLowStockProducts(data.products || []);
+          setLowStockError("");
+        }
+      } catch (error) {
+        if (currentRequest === requestId) {
+          console.error("Low-stock fetch error:", error);
+          setLowStockError(
+            error.response?.data?.message || "Unable to load inventory alerts.",
+          );
+        }
+      } finally {
+        if (currentRequest === requestId) {
+          setLowStockLoading(false);
+        }
+      }
+    };
+
+    fetchDashboardData();
+
+    window.addEventListener("focus", fetchDashboardData);
+
+    return () => {
+      requestId++;
+      window.removeEventListener("focus", fetchDashboardData);
+    };
+  }, []);
 
   const monthEntries = stats ? Object.entries(stats.monthlyRevenue) : [];
   const maxRev = Math.max(...monthEntries.map(([, v]) => v), 1);
 
   // Fill up to 12 months display
-  const allMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const allMonths = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const monthMap = Object.fromEntries(monthEntries);
-  const barData = allMonths.map(m => {
-    const key = Object.keys(monthMap).find(k => k.startsWith(m)) || null;
+  const barData = allMonths.map((m) => {
+    const key = Object.keys(monthMap).find((k) => k.startsWith(m)) || null;
     return { month: m, value: key ? monthMap[key] : 0 };
   });
 
   const categoryStats = [
-    { label: 'Women', percent: 63, color: '#f59e0b' },
-    { label: 'Men', percent: 88, color: '#ef4444' },
-    { label: 'Kids', percent: 38, color: '#8b5cf6' },
+    { label: "Women", percent: 63, color: "#f59e0b" },
+    { label: "Men", percent: 88, color: "#ef4444" },
+    { label: "Kids", percent: 38, color: "#8b5cf6" },
   ];
 
-  const customerCircles = stats ? [
-    { label: 'Current Customers', percent: 85, color: '#8b5cf6' },
-    { label: 'New Customers', percent: 66, color: '#f59e0b' },
-    { label: 'Target Customers', percent: 90, color: '#f59e0b' },
-    { label: 'Retarget Customers', percent: 30, color: '#ef4444' },
-  ] : [];
+  const customerCircles = stats
+    ? [
+        { label: "Current Customers", percent: 85, color: "#8b5cf6" },
+        { label: "New Customers", percent: 66, color: "#f59e0b" },
+        { label: "Target Customers", percent: 90, color: "#f59e0b" },
+        { label: "Retarget Customers", percent: 30, color: "#ef4444" },
+      ]
+    : [];
 
   return (
     <div

@@ -36,19 +36,43 @@ export default function ShopPage() {
     setSearchParams(next);
   };
 
-  useEffect(() => {
+useEffect(() => {
+  let cancelled = false;
+
+  const fetchProducts = async () => {
     setLoading(true);
+
     const params = { sort, page, limit: 12 };
     if (category) params.category = category;
     if (search) params.search = search;
     if (minPrice) params.minPrice = minPrice;
     if (maxPrice) params.maxPrice = maxPrice;
 
-    getProducts(params)
-      .then(({ data }) => { setProducts(data.products); setTotal(data.total); setPages(data.pages); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [category, search, sort, page, minPrice, maxPrice]);
+    try {
+      const { data } = await getProducts(params);
+
+      if (!cancelled) {
+        setProducts(data.products);
+        setTotal(data.total);
+        setPages(data.pages);
+      }
+    } catch (error) {
+      if (!cancelled) console.error(error);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+
+  const handleFocus = () => fetchProducts();
+
+  fetchProducts();
+  window.addEventListener("focus", handleFocus);
+
+  return () => {
+    cancelled = true;
+    window.removeEventListener("focus", handleFocus);
+  };
+}, [category, search, sort, page, minPrice, maxPrice]);
 
   const title = category ? category.charAt(0).toUpperCase() + category.slice(1) : (search ? `Search: "${search}"` : 'All Products');
 

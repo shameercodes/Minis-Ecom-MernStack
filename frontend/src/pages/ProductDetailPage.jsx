@@ -1,13 +1,21 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { FiHeart, FiShoppingBag, FiTruck, FiShield, FiRefreshCw, FiShare2, FiStar } from 'react-icons/fi';
-import { getProduct, addReview, getProducts } from '../utils/api';
-import { useCart } from '../context/CartContext';
-import { useWishlist } from '../context/WishlistContext';
-import { useAuth } from '../context/AuthContext';
-import { PageLoader, StarRating } from '../components/ui/Spinner';
-import ProductCard from '../components/ui/ProductCard';
-import toast from 'react-hot-toast';
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import {
+  FiHeart,
+  FiShoppingBag,
+  FiTruck,
+  FiShield,
+  FiRefreshCw,
+  FiShare2,
+  FiStar,
+} from "react-icons/fi";
+import { getProduct, addReview, getProducts } from "../utils/api";
+import { useCart } from "../context/CartContext";
+import { useWishlist } from "../context/WishlistContext";
+import { useAuth } from "../context/AuthContext";
+import { PageLoader, StarRating } from "../components/ui/Spinner";
+import ProductCard from "../components/ui/ProductCard";
+import toast from "react-hot-toast";
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
@@ -18,7 +26,7 @@ export default function ProductDetailPage() {
   const [selectedColor, setSelectedColor] = useState(null);
   const [qty, setQty] = useState(1);
   const [related, setRelated] = useState([]);
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const [reviewLoading, setReviewLoading] = useState(false);
   const { addToCart } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
@@ -32,43 +40,90 @@ export default function ProductDetailPage() {
         setSelectedSize(data.sizes?.[0] || null);
         setSelectedColor(data.colors?.[0] || null);
         // Load related
-        getProducts({ category: data.category, limit: 4 })
-          .then(r => setRelated(r.data.products.filter(p => p._id !== data._id).slice(0, 4)));
+        getProducts({ category: data.category, limit: 4 }).then((r) =>
+          setRelated(
+            r.data.products.filter((p) => p._id !== data._id).slice(0, 4),
+          ),
+        );
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
   }, [slug]);
 
+  useEffect(() => {
+    const refreshStock = async () => {
+      try {
+        const { data } = await getProduct(slug);
+
+        setProduct((prev) => (prev ? { ...prev, ...data } : data));
+
+        setQty((prev) =>
+          data.trackInventory === false ? prev : Math.min(prev, data.stock),
+        );
+      } catch (error) {
+        console.error("Failed to refresh product stock:", error);
+      }
+    };
+
+    window.addEventListener("focus", refreshStock);
+
+    return () => {
+      window.removeEventListener("focus", refreshStock);
+    };
+  }, [slug]);
+
   if (loading) return <PageLoader />;
-  if (!product) return (
-    <div className="container-custom py-20 text-center">
-      <h2 className="font-display text-3xl mb-4">Product Not Found</h2>
-      <Link to="/shop" className="btn-primary">Back to Shop</Link>
-    </div>
-  );
+  if (!product)
+    return (
+      <div className="container-custom py-20 text-center">
+        <h2 className="font-display text-3xl mb-4">Product Not Found</h2>
+        <Link to="/shop" className="btn-primary">
+          Back to Shop
+        </Link>
+      </div>
+    );
 
   const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    ? Math.round(
+        ((product.originalPrice - product.price) / product.originalPrice) * 100,
+      )
     : 0;
 
   const handleAddToCart = () => {
-    if (product.sizes?.length && !selectedSize) return toast.error('Please select a size');
-    if (product.colors?.length && !selectedColor) return toast.error('Please select a color');
+    if (product.sizes?.length && !selectedSize) {
+      return toast.error("Please select a size");
+    }
+
+    if (product.colors?.length && !selectedColor) {
+      return toast.error("Please select a color");
+    }
+
+    const inventoryTracked = product.trackInventory !== false;
+    const availableStock = Number(product.stock) || 0;
+
+    if (inventoryTracked && availableStock <= 0) {
+      return toast.error("This product is out of stock");
+    }
+
+    if (inventoryTracked && qty > availableStock) {
+      return toast.error(`Only ${availableStock} items are available`);
+    }
+
     addToCart(product, qty, selectedSize, selectedColor);
   };
 
   const handleReview = async (e) => {
     e.preventDefault();
-    if (!user) return toast.error('Please login to leave a review');
+    if (!user) return toast.error("Please login to leave a review");
     setReviewLoading(true);
     try {
       await addReview(product._id, reviewForm);
-      toast.success('Review submitted!');
+      toast.success("Review submitted!");
       const { data } = await getProduct(slug);
       setProduct(data);
-      setReviewForm({ rating: 5, comment: '' });
+      setReviewForm({ rating: 5, comment: "" });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Review failed');
+      toast.error(err.response?.data?.message || "Review failed");
     } finally {
       setReviewLoading(false);
     }
@@ -79,10 +134,17 @@ export default function ProductDetailPage() {
       <div className="container-custom py-8">
         {/* Breadcrumb */}
         <nav className="text-xs text-gray-400 mb-8 flex items-center gap-2">
-          <Link to="/" className="hover:text-primary-600">Home</Link>
+          <Link to="/" className="hover:text-primary-600">
+            Home
+          </Link>
           <span>/</span>
-          <Link to={`/shop/${product.category}`} className="hover:text-primary-600
-          capitalize">{product.category}</Link>
+          <Link
+            to={`/shop/${product.category}`}
+            className="hover:text-primary-600
+          capitalize"
+          >
+            {product.category}
+          </Link>
           <span>/</span>
           <span className="text-dark">{product.name}</span>
         </nav>
@@ -92,7 +154,10 @@ export default function ProductDetailPage() {
           <div className="space-y-3">
             <div className="aspect-square overflow-hidden bg-gray-50">
               <img
-                src={product.images?.[selectedImage] || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600'}
+                src={
+                  product.images?.[selectedImage] ||
+                  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600"
+                }
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
@@ -104,9 +169,13 @@ export default function ProductDetailPage() {
                     key={i}
                     onClick={() => setSelectedImage(i)}
                     className={`w-20 h-20 overflow-hidden border-2 transition-colors
-                      ${selectedImage === i ? 'border-primary-500' : 'border-transparent'}`}
+                      ${selectedImage === i ? "border-primary-500" : "border-transparent"}`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={img}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>
@@ -115,32 +184,48 @@ export default function ProductDetailPage() {
 
           {/* Details */}
           <div>
-            <p className="text-xs tracking-widest uppercase text-primary-600 mb-2">{product.subcategory || product.category}</p>
-            <h1 className="font-display text-3xl md:text-4xl text-dark mb-3">{product.name}</h1>
+            <p className="text-xs tracking-widest uppercase text-primary-600 mb-2">
+              {product.subcategory || product.category}
+            </p>
+            <h1 className="font-display text-3xl md:text-4xl text-dark mb-3">
+              {product.name}
+            </h1>
             <div className="flex items-center gap-3 mb-4">
-              <StarRating rating={product.rating} count={product.numReviews} size="md" />
+              <StarRating
+                rating={product.rating}
+                count={product.numReviews}
+                size="md"
+              />
             </div>
             <div className="flex items-baseline gap-3 mb-6">
-              <span className="text-2xl font-bold text-dark">PKR {product.price.toLocaleString()}</span>
+              <span className="text-2xl font-bold text-dark">
+                PKR {product.price.toLocaleString()}
+              </span>
               {discount > 0 && (
                 <>
-                  <span className="text-gray-400 line-through">PKR {product.originalPrice.toLocaleString()}</span>
+                  <span className="text-gray-400 line-through">
+                    PKR {product.originalPrice.toLocaleString()}
+                  </span>
                   <span className="badge">-{discount}%</span>
                 </>
               )}
             </div>
-            <p className="text-gray-600 text-sm leading-relaxed mb-8">{product.description}</p>
+            <p className="text-gray-600 text-sm leading-relaxed mb-8">
+              {product.description}
+            </p>
 
             {/* Colors */}
             {product.colors?.length > 0 && (
               <div className="mb-5">
-                <p className="text-sm font-medium mb-2">Color: <span className="text-gray-500">{selectedColor}</span></p>
+                <p className="text-sm font-medium mb-2">
+                  Color: <span className="text-gray-500">{selectedColor}</span>
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {product.colors.map(c => (
+                  {product.colors.map((c) => (
                     <button
                       key={c}
                       onClick={() => setSelectedColor(c)}
-                      className={`px-4 py-2 text-xs border transition-colors ${selectedColor === c ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-gray-300 hover:border-primary-400'}`}
+                      className={`px-4 py-2 text-xs border transition-colors ${selectedColor === c ? "border-primary-600 bg-primary-50 text-primary-700" : "border-gray-300 hover:border-primary-400"}`}
                     >
                       {c}
                     </button>
@@ -152,13 +237,15 @@ export default function ProductDetailPage() {
             {/* Sizes */}
             {product.sizes?.length > 0 && (
               <div className="mb-5">
-                <p className="text-sm font-medium mb-2">Size: <span className="text-gray-500">{selectedSize}</span></p>
+                <p className="text-sm font-medium mb-2">
+                  Size: <span className="text-gray-500">{selectedSize}</span>
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {product.sizes.map(s => (
+                  {product.sizes.map((s) => (
                     <button
                       key={s}
                       onClick={() => setSelectedSize(s)}
-                      className={`w-12 h-10 text-sm border transition-colors ${selectedSize === s ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300 hover:border-primary-400'}`}
+                      className={`w-12 h-10 text-sm border transition-colors ${selectedSize === s ? "border-primary-600 bg-primary-600 text-white" : "border-gray-300 hover:border-primary-400"}`}
                     >
                       {s}
                     </button>
@@ -170,40 +257,79 @@ export default function ProductDetailPage() {
             {/* Quantity */}
             <div className="flex items-center gap-4 mb-6">
               <div className="flex border border-gray-300">
-                <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-4 py-2 hover:bg-gray-50 text-lg">−</button>
-                <span className="px-5 py-2 border-x border-gray-300 text-sm font-medium">{qty}</span>
-                <button onClick={() => setQty(q => Math.min(product.stock, q + 1))} className="px-4 py-2 hover:bg-gray-50 text-lg">+</button>
+                <button
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="px-4 py-2 hover:bg-gray-50 text-lg"
+                >
+                  −
+                </button>
+                <span className="px-5 py-2 border-x border-gray-300 text-sm font-medium">
+                  {qty}
+                </span>
+                <button
+                  onClick={() =>
+                    setQty((q) =>
+                      product.trackInventory === false
+                        ? q + 1
+                        : Math.min(product.stock, q + 1),
+                    )
+                  }
+                  disabled={
+                    product.trackInventory !== false && qty >= product.stock
+                  }
+                  className="px-4 py-2 hover:bg-gray-50 text-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {" "}
+                  +{" "}
+                </button>
               </div>
-              <span className="text-xs text-gray-500">{product.stock} in stock</span>
+              <span className="text-xs text-gray-500">
+                {product.trackInventory === false
+                  ? "Available"
+                  : product.stock > 0
+                    ? `${product.stock} in stock`
+                    : "Out of stock"}
+              </span>
             </div>
 
             {/* Actions */}
             <div className="flex gap-3 mb-6">
               <button
                 onClick={handleAddToCart}
-                disabled={product.stock === 0}
+                disabled={
+                  product.trackInventory !== false && product.stock <= 0
+                }
                 className="flex-1 btn-dark flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <FiShoppingBag size={16} />
-                {product.stock === 0 ? 'Sold Out' : 'Add to Cart'}
+                {product.trackInventory !== false && product.stock <= 0
+                  ? "Sold Out"
+                  : "Add to Cart"}
               </button>
               <button
                 onClick={() => toggleWishlist(product)}
-                className={`w-12 h-12 flex items-center justify-center border transition-colors ${isWishlisted(product._id) ? 'bg-primary-600 border-primary-600 text-white' : 'border-gray-300 hover:border-primary-600'}`}
+                className={`w-12 h-12 flex items-center justify-center border transition-colors ${isWishlisted(product._id) ? "bg-primary-600 border-primary-600 text-white" : "border-gray-300 hover:border-primary-600"}`}
               >
-                <FiHeart size={18} fill={isWishlisted(product._id) ? 'currentColor' : 'none'} />
+                <FiHeart
+                  size={18}
+                  fill={isWishlisted(product._id) ? "currentColor" : "none"}
+                />
               </button>
             </div>
 
             {/* Trust badges */}
             <div className="border-t border-gray-100 pt-6 space-y-2">
               {[
-                [FiTruck, 'Free delivery on orders over PKR 5,000'],
-                [FiShield, '100% authentic products guaranteed'],
-                [FiRefreshCw, '30-day easy returns'],
+                [FiTruck, "Free delivery on orders over PKR 5,000"],
+                [FiShield, "100% authentic products guaranteed"],
+                [FiRefreshCw, "30-day easy returns"],
               ].map(([Icon, text]) => (
-                <div key={text} className="flex items-center gap-2 text-xs text-gray-500">
-                  <Icon size={14} className="text-primary-600" />{text}
+                <div
+                  key={text}
+                  className="flex items-center gap-2 text-xs text-gray-500"
+                >
+                  <Icon size={14} className="text-primary-600" />
+                  {text}
                 </div>
               ))}
             </div>
@@ -212,18 +338,24 @@ export default function ProductDetailPage() {
 
         {/* Reviews */}
         <div className="mt-16 border-t pt-12">
-          <h2 className="font-display text-2xl mb-8">Customer Reviews ({product.numReviews})</h2>
+          <h2 className="font-display text-2xl mb-8">
+            Customer Reviews ({product.numReviews})
+          </h2>
           <div className="grid md:grid-cols-2 gap-10">
             {/* Review list */}
             <div className="space-y-5">
               {product.reviews?.length === 0 ? (
-                <p className="text-gray-500 text-sm">No reviews yet. Be the first!</p>
+                <p className="text-gray-500 text-sm">
+                  No reviews yet. Be the first!
+                </p>
               ) : (
-                product.reviews.map(r => (
+                product.reviews.map((r) => (
                   <div key={r._id} className="border-b border-gray-100 pb-5">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-medium text-sm">{r.name}</span>
-                      <span className="text-xs text-gray-400">{new Date(r.createdAt).toLocaleDateString()}</span>
+                      <span className="text-xs text-gray-400">
+                        {new Date(r.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                     <StarRating rating={r.rating} />
                     <p className="text-sm text-gray-600 mt-2">{r.comment}</p>
@@ -237,33 +369,65 @@ export default function ProductDetailPage() {
               <h3 className="font-semibold mb-4">Write a Review</h3>
               {!user ? (
                 <p className="text-sm text-gray-500">
-                  <Link to="/login" className="text-primary-600 font-medium">Sign in</Link> to leave a review
+                  <Link to="/login" className="text-primary-600 font-medium">
+                    Sign in
+                  </Link>{" "}
+                  to leave a review
                 </p>
               ) : (
                 <form onSubmit={handleReview} className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium block mb-1">Rating</label>
+                    <label className="text-sm font-medium block mb-1">
+                      Rating
+                    </label>
                     <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map(s => (
-                        <button key={s} type="button" onClick={() => setReviewForm(f => ({ ...f, rating: s }))}>
-                          <FiStar size={22} className={s <= reviewForm.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} fill={s <= reviewForm.rating ? 'currentColor' : 'none'} />
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() =>
+                            setReviewForm((f) => ({ ...f, rating: s }))
+                          }
+                        >
+                          <FiStar
+                            size={22}
+                            className={
+                              s <= reviewForm.rating
+                                ? "text-yellow-400 fill-yellow-400"
+                                : "text-gray-300"
+                            }
+                            fill={
+                              s <= reviewForm.rating ? "currentColor" : "none"
+                            }
+                          />
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium block mb-1">Comment</label>
+                    <label className="text-sm font-medium block mb-1">
+                      Comment
+                    </label>
                     <textarea
                       value={reviewForm.comment}
-                      onChange={e => setReviewForm(f => ({ ...f, comment: e.target.value }))}
+                      onChange={(e) =>
+                        setReviewForm((f) => ({
+                          ...f,
+                          comment: e.target.value,
+                        }))
+                      }
                       rows={4}
                       required
                       placeholder="Share your experience..."
                       className="input-field resize-none"
                     />
                   </div>
-                  <button type="submit" disabled={reviewLoading} className="btn-primary disabled:opacity-50">
-                    {reviewLoading ? 'Submitting...' : 'Submit Review'}
+                  <button
+                    type="submit"
+                    disabled={reviewLoading}
+                    className="btn-primary disabled:opacity-50"
+                  >
+                    {reviewLoading ? "Submitting..." : "Submit Review"}
                   </button>
                 </form>
               )}
@@ -276,7 +440,9 @@ export default function ProductDetailPage() {
           <div className="mt-16">
             <h2 className="font-display text-2xl mb-8">You May Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {related.map(p => <ProductCard key={p._id} product={p} />)}
+              {related.map((p) => (
+                <ProductCard key={p._id} product={p} />
+              ))}
             </div>
           </div>
         )}

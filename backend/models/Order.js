@@ -42,6 +42,8 @@ const orderSchema = new mongoose.Schema(
     isPaid: { type: Boolean, default: false },
     paidAt: Date,
     isDelivered: { type: Boolean, default: false },
+    // Prevent duplicate inventory restoration
+    stockRestored: { type: Boolean, default: false,},
     deliveredAt: Date,
     status: {
       type: String,
