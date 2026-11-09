@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { getProduct } from "../utils/api";
 
@@ -14,33 +14,39 @@ export function CartProvider({ children }) {
     }
   });
 
+  const cartItemsRef = useRef(cartItems);
+
+  useEffect(() => {
+    cartItemsRef.current = cartItems;
+  }, [cartItems]);
+
   // Keep cart saved in localStorage
   useEffect(() => {
     localStorage.setItem("minis_cart", JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // Refresh stock and product information from backend
+  // Refresh stock when app loads, tab regains focus, or becomes visible
   useEffect(() => {
     let cancelled = false;
 
     const syncCartStock = async () => {
-      if (!cartItems.length) return;
+      const currentItems = cartItemsRef.current;
+
+      if (!currentItems.length) return;
 
       const results = await Promise.all(
-        cartItems.map(async (item) => {
+        currentItems.map(async (item) => {
           try {
             const { data } = await getProduct(item._id);
 
             return {
               id: item._id,
               product: data,
-              error: null,
             };
           } catch (error) {
             return {
               id: item._id,
               product: null,
-              error,
             };
           }
         }),
@@ -49,34 +55,48 @@ export function CartProvider({ children }) {
       if (cancelled) return;
 
       setCartItems((prev) =>
-        prev
-          .map((item) => {
-            const result = results.find((r) => r.id === item._id);
+        prev.map((item) => {
+          const result = results.find((r) => r.id === item._id);
 
-            if (!result || !result.product) return item;
+          if (!result?.product) return item;
 
-            const latestProduct = result.product;
-            const updatedQty =
-              latestProduct.trackInventory === false
-                ? item.qty
-                : Math.min(item.qty, latestProduct.stock);
+          const latestProduct = result.product;
 
-            return {
-              ...item,
-              ...latestProduct,
-              qty: updatedQty,
-              selectedSize: item.selectedSize,
-              selectedColor: item.selectedColor,
-            };
-          })
-          .filter((item) => item.qty > 0),
+          const updatedQty =
+            latestProduct.trackInventory === false
+              ? item.qty
+              : latestProduct.stock > 0
+                ? Math.min(item.qty, latestProduct.stock)
+                : item.qty;
+
+          return {
+            ...item,
+            ...latestProduct,
+            qty: updatedQty,
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
+          };
+        }),
       );
     };
 
     syncCartStock();
 
+    const handleFocus = () => syncCartStock();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncCartStock();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 

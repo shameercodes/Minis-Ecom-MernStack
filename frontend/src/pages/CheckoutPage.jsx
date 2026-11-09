@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createOrder, validateCoupon } from "../utils/api";
+import { createOrder, validateCoupon, getProduct } from "../utils/api";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -34,9 +34,7 @@ const Field = ({
       className="input-field"
       {...rest}
     />
-    {error ? (
-      <p className="text-red-600 text-xs mt-1">{error}</p>
-    ) : null}
+    {error ? <p className="text-red-600 text-xs mt-1">{error}</p> : null}
   </div>
 );
 
@@ -64,8 +62,10 @@ function validateCheckoutForm(form) {
 
   const street = form.address.trim();
   if (!street) errors.address = "Street address is required";
-  else if (/[\r\n]/.test(street)) errors.address = "Street address must be a single line";
-  else if (street.length < 5) errors.address = "Street address is too short (at least 5 characters)";
+  else if (/[\r\n]/.test(street))
+    errors.address = "Street address must be a single line";
+  else if (street.length < 5)
+    errors.address = "Street address is too short (at least 5 characters)";
   else if (street.length > 180) errors.address = "Street address is too long";
   else if (!STREET_RE.test(street))
     errors.address = "Use letters, numbers, spaces, or , . ' # - / ( ) only";
@@ -73,23 +73,28 @@ function validateCheckoutForm(form) {
   const city = form.city.trim();
   if (!city) errors.city = "City is required";
   else if (/[\r\n]/.test(city)) errors.city = "City must be a single line";
-  else if (city.length < 2 || city.length > 80) errors.city = "City must be 2–80 characters";
+  else if (city.length < 2 || city.length > 80)
+    errors.city = "City must be 2–80 characters";
   else if (!CITY_RE.test(city))
-    errors.city = "City may only contain letters, spaces, hyphens or apostrophes";
+    errors.city =
+      "City may only contain letters, spaces, hyphens or apostrophes";
 
   const postalNorm = form.postalCode.trim().toUpperCase().replace(/\s+/g, " ");
   if (!postalNorm) errors.postalCode = "Postal code is required";
-  else if (/[\r\n]/.test(postalNorm)) errors.postalCode = "Postal code must be a single line";
+  else if (/[\r\n]/.test(postalNorm))
+    errors.postalCode = "Postal code must be a single line";
   else if (/[^A-Z0-9\s\-]/.test(postalNorm))
     errors.postalCode =
       "Postal code may only contain letters, numbers, spaces or hyphens";
-  else if (postalNorm.length > 15) errors.postalCode = "Postal code is too long";
+  else if (postalNorm.length > 15)
+    errors.postalCode = "Postal code is too long";
   else if (postalNorm.replace(/[\s-]/g, "").length < 3)
     errors.postalCode = "Postal code must have at least 3 letters or digits";
 
   const country = form.country.trim();
   if (!country) errors.country = "Country is required";
-  else if (/[\r\n]/.test(country)) errors.country = "Country must be a single line";
+  else if (/[\r\n]/.test(country))
+    errors.country = "Country must be a single line";
   else if (country.length < 2 || country.length > 80)
     errors.country = "Country must be 2–80 characters";
   else if (!COUNTRY_RE.test(country))
@@ -123,56 +128,56 @@ export default function CheckoutPage() {
     notes: "",
   });
 
-const shipping = cartTotal >= 5000 ? 0 : 299;
-const tax = Math.round(cartTotal * 0.05);
+  const shipping = cartTotal >= 5000 ? 0 : 299;
+  const tax = Math.round(cartTotal * 0.05);
 
-// Only use the coupon if it was validated for the current cart subtotal
-const isCouponValidForCart =
-  appliedCoupon && Number(appliedCoupon.itemsPrice) === Number(cartTotal);
+  // Only use the coupon if it was validated for the current cart subtotal
+  const isCouponValidForCart =
+    appliedCoupon && Number(appliedCoupon.itemsPrice) === Number(cartTotal);
 
-const discount = isCouponValidForCart
-  ? Number(appliedCoupon.discountAmount)
-  : 0;
+  const discount = isCouponValidForCart
+    ? Number(appliedCoupon.discountAmount)
+    : 0;
 
-const total = cartTotal - discount + shipping + tax;
+  const total = cartTotal - discount + shipping + tax;
 
-// Apply coupon
-const handleApplyCoupon = async () => {
-  const code = couponInput.trim().toUpperCase();
+  // Apply coupon
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
 
-  if (!code) {
-    return toast.error("Please enter a coupon code");
-  }
+    if (!code) {
+      return toast.error("Please enter a coupon code");
+    }
 
-  if (cartItems.length === 0) {
-    return toast.error("Your cart is empty");
-  }
+    if (cartItems.length === 0) {
+      return toast.error("Your cart is empty");
+    }
 
-  setCouponLoading(true);
+    setCouponLoading(true);
 
-  try {
-    const { data } = await validateCoupon({
-      code,
-      itemsPrice: cartTotal,
-    });
+    try {
+      const { data } = await validateCoupon({
+        code,
+        itemsPrice: cartTotal,
+      });
 
-    setAppliedCoupon(data);
-    setCouponInput(data.code || code);
+      setAppliedCoupon(data);
+      setCouponInput(data.code || code);
 
-    toast.success(data.message || "Coupon applied successfully!");
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Unable to apply coupon");
-  } finally {
-    setCouponLoading(false);
-  }
-};
+      toast.success(data.message || "Coupon applied successfully!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Unable to apply coupon");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
-// Remove coupon
-const handleRemoveCoupon = () => {
-  setAppliedCoupon(null);
-  setCouponInput("");
-  toast.success("Coupon removed");
-};
+  // Remove coupon
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    toast.success("Coupon removed");
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -209,6 +214,38 @@ const handleRemoveCoupon = () => {
     if (errors[name]) setErrors((er) => ({ ...er, [name]: "" }));
   };
 
+  const checkLatestStock = async () => {
+    const results = await Promise.all(
+      cartItems.map(async (item) => {
+        const { data: latestProduct } = await getProduct(item._id);
+
+        return {
+          name: latestProduct.name,
+          stock: Number(latestProduct.stock ?? 0),
+          trackInventory: latestProduct.trackInventory !== false,
+          quantity: item.qty,
+        };
+      }),
+    );
+
+    const unavailable = results.find(
+      (item) =>
+        item.trackInventory && (item.stock <= 0 || item.quantity > item.stock),
+    );
+
+    if (unavailable) {
+      toast.error(
+        unavailable.stock <= 0
+          ? `${unavailable.name} is out of stock.`
+          : `Only ${unavailable.stock} units of ${unavailable.name} are available.`,
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (cartItems.length === 0) return toast.error("Cart is empty");
@@ -223,6 +260,10 @@ const handleRemoveCoupon = () => {
     setLoading(true);
 
     try {
+      const stockIsValid = await checkLatestStock();
+
+      if (!stockIsValid) return;
+
       const orderData = {
         orderItems: cartItems.map((i) => ({
           product: i._id,
@@ -339,187 +380,189 @@ const handleRemoveCoupon = () => {
                 />
               </div>
             </div>
-</div>
-            {/* Payment */}
-            <div className="border border-gray-200 p-6">
-              <h2 className="font-semibold text-lg mb-5">Payment Method</h2>
+          </div>
+          {/* Payment */}
+          <div className="border border-gray-200 p-6">
+            <h2 className="font-semibold text-lg mb-5">Payment Method</h2>
 
-              <div className="space-y-3">
-                {[
-                  "Cash on Delivery",
-                  "Bank Transfer",
-                  "EasyPaisa",
-                  "JazzCash",
-                ].map((method) => (
-                  <label
-                    key={method}
-                    className="flex items-center gap-3 cursor-pointer p-3 border
+            <div className="space-y-3">
+              {[
+                "Cash on Delivery",
+                "Bank Transfer",
+                "EasyPaisa",
+                "JazzCash",
+              ].map((method) => (
+                <label
+                  key={method}
+                  className="flex items-center gap-3 cursor-pointer p-3 border
                      hover:border-primary-300"
-                    style={{
-                      borderColor:
-                        form.paymentMethod === method ? "#db2777" : undefined,
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={method}
-                      checked={form.paymentMethod === method}
-                      onChange={handleChange}
-                      className="accent-primary-600"
-                    />
-                    <span className="text-sm font-medium">{method}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="border border-gray-200 p-6">
-              <h2 className="font-semibold text-lg mb-3">
-                Order Notes (Optional)
-              </h2>
-
-              <textarea
-                name="notes"
-                value={form.notes}
-                onChange={handleChange}
-                rows={3}
-                placeholder="Special instructions or notes..."
-                className="input-field resize-none"
-              />
+                  style={{
+                    borderColor:
+                      form.paymentMethod === method ? "#db2777" : undefined,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value={method}
+                    checked={form.paymentMethod === method}
+                    onChange={handleChange}
+                    className="accent-primary-600"
+                  />
+                  <span className="text-sm font-medium">{method}</span>
+                </label>
+              ))}
             </div>
           </div>
 
-          {/* SUMMARY */}
-          <div>
-            <div className="bg-gray-50 p-6 sticky top-24">
-              <h2 className="font-semibold text-lg mb-5">Your Order</h2>
+          {/* Notes */}
+          <div className="border border-gray-200 p-6">
+            <h2 className="font-semibold text-lg mb-3">
+              Order Notes (Optional)
+            </h2>
 
-              <div className="space-y-3 mb-5">
-                {cartItems.map((item) => (
-                  <div
-                    key={`${item._id}-${item.selectedSize}`}
-                    className="flex gap-3"
-                  >
-                    <img
-                      src={item.images?.[0]}
-                      alt={item.name}
-                      className="w-12 h-14 object-cover bg-gray-200"
+            <textarea
+              name="notes"
+              value={form.notes}
+              onChange={handleChange}
+              rows={3}
+              placeholder="Special instructions or notes..."
+              className="input-field resize-none"
+            />
+          </div>
+        </div>
+
+        {/* SUMMARY */}
+        <div>
+          <div className="bg-gray-50 p-6 sticky top-24">
+            <h2 className="font-semibold text-lg mb-5">Your Order</h2>
+
+            <div className="space-y-3 mb-5">
+              {cartItems.map((item) => (
+                <div
+                  key={`${item._id}-${item.selectedSize}`}
+                  className="flex gap-3"
+                >
+                  <img
+                    src={item.images?.[0]}
+                    alt={item.name}
+                    className="w-12 h-14 object-cover bg-gray-200"
+                  />
+
+                  <div className="flex-1">
+                    <p className="text-xs font-medium line-clamp-1">
+                      {item.name}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {item.selectedSize} · Qty {item.qty}
+                    </p>
+                  </div>
+
+                  <span className="text-xs font-medium">
+                    PKR {(item.price * item.qty).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t pt-4 space-y-2 text-sm">
+              {/* Coupon Section */}
+              <div className="border-t border-gray-200 pt-4 mb-4">
+                <h3 className="font-semibold text-sm mb-3">Apply Coupon</h3>
+
+                {!appliedCoupon ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) =>
+                        setCouponInput(e.target.value.toUpperCase())
+                      }
+                      placeholder="Enter coupon code"
+                      className="input-field min-w-0 flex-1 uppercase"
+                      disabled={
+                        couponLoading || loading || cartItems.length === 0
+                      }
                     />
 
-                    <div className="flex-1">
-                      <p className="text-xs font-medium line-clamp-1">
-                        {item.name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {item.selectedSize} · Qty {item.qty}
-                      </p>
-                    </div>
-
-                    <span className="text-xs font-medium">
-                      PKR {(item.price * item.qty).toLocaleString()}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || loading || !couponInput.trim()}
+                      className="btn-dark px-4 text-sm disabled:opacity-50"
+                    >
+                      {couponLoading ? "Applying..." : "Apply"}
+                    </button>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="border border-green-200 bg-green-50 p-3 rounded">
+                    <div className="flex justify-between items-center gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-green-700">
+                          {appliedCoupon.code}
+                        </p>
+                        <p className="text-xs text-green-600">
+                          {isCouponValidForCart
+                            ? "Coupon applied successfully"
+                            : "Cart changed. Reapply your coupon."}
+                        </p>
 
-              <div className="border-t pt-4 space-y-2 text-sm">
-                {/* Coupon Section */}
-                <div className="border-t border-gray-200 pt-4 mb-4">
-                  <h3 className="font-semibold text-sm mb-3">Apply Coupon</h3>
-
-                  {!appliedCoupon ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={couponInput}
-                        onChange={(e) =>
-                          setCouponInput(e.target.value.toUpperCase())
-                        }
-                        placeholder="Enter coupon code"
-                        className="input-field min-w-0 flex-1 uppercase"
-                        disabled={couponLoading || loading || cartItems.length === 0}
-                      />
+                        {!isCouponValidForCart && (
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={
+                              couponLoading || loading || cartItems.length === 0
+                            }
+                            className="text-xs text-blue-600 font-medium hover:underline mt-2"
+                          >
+                            {couponLoading ? "Applying..." : "Reapply Coupon"}
+                          </button>
+                        )}
+                      </div>
 
                       <button
                         type="button"
-                        onClick={handleApplyCoupon}
-                        disabled={
-                          couponLoading || loading || !couponInput.trim()
-                        }
-                        className="btn-dark px-4 text-sm disabled:opacity-50"
+                        onClick={handleRemoveCoupon}
+                        disabled={loading}
+                        className="text-xs text-red-600 font-medium hover:underline"
                       >
-                        {couponLoading ? "Applying..." : "Apply"}
+                        Remove
                       </button>
                     </div>
-                  ) : (
-                    <div className="border border-green-200 bg-green-50 p-3 rounded">
-                      <div className="flex justify-between items-center gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-green-700">
-                            {appliedCoupon.code}
-                          </p>
-                            <p className="text-xs text-green-600">
-                              {isCouponValidForCart
-                                ? "Coupon applied successfully"
-                                : "Cart changed. Reapply your coupon."}
-                            </p>
-
-                              {!isCouponValidForCart && (
-                                <button
-                                  type="button"
-                                  onClick={handleApplyCoupon}
-                                  disabled={couponLoading || loading || cartItems.length === 0}
-                                  className="text-xs text-blue-600 font-medium hover:underline mt-2"
-                                >
-                                  {couponLoading ? "Applying..." : "Reapply Coupon"}
-                                </button>
-                              )}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={handleRemoveCoupon}
-                          disabled={loading}
-                          className="text-xs text-red-600 font-medium hover:underline"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  </div>
+                )}
+              </div>
+              <div className="border-t pt-4 space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>PKR {cartTotal.toLocaleString()}</span>
                 </div>
-<div className="border-t pt-4 space-y-3 text-sm">
-  <div className="flex justify-between">
-    <span>Subtotal</span>
-    <span>PKR {cartTotal.toLocaleString()}</span>
-  </div>
 
-  <div className="flex justify-between">
-    <span>Shipping</span>
-    <span className={shipping === 0 ? "text-green-600" : ""}>
-      {shipping === 0 ? "FREE" : `PKR ${shipping}`}
-    </span>
-  </div>
+                <div className="flex justify-between">
+                  <span>Shipping</span>
+                  <span className={shipping === 0 ? "text-green-600" : ""}>
+                    {shipping === 0 ? "FREE" : `PKR ${shipping}`}
+                  </span>
+                </div>
 
-  <div className="flex justify-between">
-    <span>Tax</span>
-    <span>PKR {tax.toLocaleString()}</span>
-  </div>
+                <div className="flex justify-between">
+                  <span>Tax</span>
+                  <span>PKR {tax.toLocaleString()}</span>
+                </div>
 
-  {discount > 0 && (
-    <div className="flex justify-between text-green-600">
-      <span>Coupon Discount ({appliedCoupon.code})</span>
-      <span>- PKR {discount.toLocaleString()}</span>
-    </div>
-  )}
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Coupon Discount ({appliedCoupon.code})</span>
+                    <span>- PKR {discount.toLocaleString()}</span>
+                  </div>
+                )}
 
-  <div className="border-t pt-3 flex justify-between font-bold text-base">
-    <span>Total</span>
-    <span>PKR {total.toLocaleString()}</span>
-  </div>
-</div>
+                <div className="border-t pt-3 flex justify-between font-bold text-base">
+                  <span>Total</span>
+                  <span>PKR {total.toLocaleString()}</span>
+                </div>
+              </div>
 
               <button
                 type="submit"

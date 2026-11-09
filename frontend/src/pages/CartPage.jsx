@@ -6,6 +6,19 @@ export default function CartPage() {
   const { cartItems, removeFromCart, updateQty, cartTotal, clearCart } =
     useCart();
 
+  const hasUnavailableItems = cartItems.some(
+    (item) => item.trackInventory !== false && Number(item.stock) <= 0,
+  );
+
+  const hasInvalidQuantities = cartItems.some(
+    (item) =>
+      item.trackInventory !== false &&
+      Number(item.stock) > 0 &&
+      item.qty > item.stock,
+  );
+
+  const checkoutBlocked = hasUnavailableItems || hasInvalidQuantities;
+
   const shipping = cartTotal >= 5000 ? 0 : 299;
   const tax = Math.round(cartTotal * 0.05);
   const orderTotal = cartTotal + shipping + tax;
@@ -66,6 +79,26 @@ export default function CartPage() {
                 <p className="font-semibold mt-2">
                   PKR {item.price.toLocaleString()}
                 </p>
+
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-gray-500">
+                    Available Stock:{" "}
+                    <span className="font-medium text-gray-700">
+                      {item.trackInventory === false
+                        ? "Not tracked"
+                        : Number(item.stock) > 0
+                          ? `${item.stock} items`
+                          : "Out of Stock"}
+                    </span>
+                  </p>
+
+                  <p className="text-xs text-gray-500">
+                    Cart Quantity:{" "}
+                    <span className="font-medium text-gray-700">
+                      {item.qty} items
+                    </span>
+                  </p>
+                </div>
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex border border-gray-300">
                     <button
@@ -170,9 +203,21 @@ export default function CartPage() {
                 <span>PKR {orderTotal.toLocaleString()}</span>
               </div>
             </div>
-            <Link to="/checkout" className="btn-dark w-full text-center block">
-              Proceed to Checkout
-            </Link>
+            {checkoutBlocked ? (
+              <button
+                disabled
+                className="btn-dark w-full text-center block opacity-50 cursor-not-allowed"
+              >
+                Remove Unavailable Items to Checkout
+              </button>
+            ) : (
+              <Link
+                to="/checkout"
+                className="btn-dark w-full text-center block"
+              >
+                Proceed to Checkout
+              </Link>
+            )}
             <div className="mt-4 text-center">
               <p className="text-xs text-gray-400">
                 🔒 Secure, encrypted checkout
