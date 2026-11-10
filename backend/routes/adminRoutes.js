@@ -6,6 +6,7 @@ const Product = require("../models/Product");
 const Order = require("../models/Order");
 const User = require("../models/User");
 const { protect, admin } = require("../middleware/auth");
+const { sendOrderStatusEmail } = require("../utils/sendOrderStatusEmail");
 
 // ─── DASHBOARD STATS ─────────────────────────────────────────────────────────
 router.get(
@@ -234,6 +235,7 @@ router.put(
 
     const session = await mongoose.startSession();
     let updatedOrder;
+    let previousStatus = null;
 
     try {
       await session.withTransaction(async () => {
@@ -242,6 +244,7 @@ router.put(
         if (!order) {
           throw new Error("ORDER_NOT_FOUND");
         }
+        previousStatus = order.status;
 
         // Never reactivate an already cancelled order.
         if (order.status === "cancelled" && status !== "cancelled") {
@@ -303,8 +306,6 @@ router.put(
 
         updatedOrder = order;
       });
-
-      return res.json(updatedOrder);
     } catch (error) {
       if (error.message === "ORDER_NOT_FOUND") {
         return res.status(404).json({
@@ -341,6 +342,40 @@ router.put(
     } finally {
       await session.endSession();
     }
+
+    // Send order status email after the transaction finishes.
+    const notificationStatuses = [
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled",
+    ];
+
+    if (
+      previousStatus !== updatedOrder.status &&
+      notificationStatuses.includes(updatedOrder.status)
+    ) {
+      try {
+        const customer = await User.findById(updatedOrder.user).select(
+          "name email",
+        );
+
+        if (customer?.email) {
+          await sendOrderStatusEmail({
+            to: customer.email,
+            order: updatedOrder,
+            status: updatedOrder.status,
+            customerName: customer.name,
+          });
+
+          console.log(`Order status email sent: ${updatedOrder._id}`);
+        }
+      } catch (emailError) {
+        console.error("Order status email failed:", emailError.message);
+      }
+    }
+
+    return res.json(updatedOrder);
   }),
 );
 
