@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getMyOrders } from '../utils/api';
+import { getMyOrders, downloadOrderInvoice } from '../utils/api';
 import { PageLoader } from '../components/ui/Spinner';
 import { FiPackage } from 'react-icons/fi';
+import toast from "react-hot-toast";
+import { FiDownload } from "react-icons/fi";
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -15,6 +17,36 @@ const STATUS_COLORS = {
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  const handleDownloadInvoice = async (orderId) => {
+    try {
+      setDownloadingId(orderId);
+
+      const { data } = await downloadOrderInvoice(orderId);
+
+      const blob = new Blob([data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `MINIS-Invoice-${orderId}.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Invoice downloaded successfully!");
+    } catch (error) {
+      console.error("Invoice download failed:", error);
+      toast.error("Unable to download invoice. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   useEffect(() => {
     getMyOrders().then(({ data }) => setOrders(data)).catch(console.error).finally(() => setLoading(false));
@@ -32,9 +64,10 @@ export default function OrdersPage() {
           <Link to="/shop" className="btn-primary inline-block mt-4">Start Shopping</Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          {orders.map(order => (
-            <Link key={order._id} to={`/orders/${order._id}`} className="block border border-gray-200 p-5 hover:border-primary-300 transition-colors">
+<div className="space-y-4">
+  {orders.map(order => (
+    <div key={order._id} >
+    <Link to={`/orders/${order._id}`} className="block border border-gray-200 p-5 hover:border-primary-300 transition-colors">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div>
                   <p className="text-xs text-gray-400">Order #{order._id.slice(-8).toUpperCase()}</p>
@@ -60,8 +93,22 @@ export default function OrdersPage() {
                 )}
               </div>
             </Link>
-          ))}
-        </div>
+
+            <div className="flex justify-end -mt-4">
+              <button
+                onClick={() => handleDownloadInvoice(order._id)}
+                disabled={downloadingId === order._id}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-primary-500 text-primary-600 hover:bg-primary-50 disabled:opacity-50 transition-colors"
+              >
+                <FiDownload size={16} />
+                {downloadingId === order._id
+                  ? 'Downloading...'
+                  : 'Download Invoice'}
+              </button>
+            </div>
+          </div>
+  ))}
+            </div>
       )}
     </div>
   );

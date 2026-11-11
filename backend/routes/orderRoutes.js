@@ -6,9 +6,8 @@ const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Coupon = require("../models/Coupon");
 const { protect } = require("../middleware/auth");
-const {
-  sendOrderConfirmationEmail,
-} = require("../utils/sendVerificationEmail");
+const { sendOrderConfirmationEmail,} = require("../utils/sendVerificationEmail");
+const generateOrderInvoice = require("../utils/generateOrderInvoice");
 
 const NAME_RE = /^[A-Za-z\s]+$/;
 const PHONE_RE = /^[0-9]+$/;
@@ -375,6 +374,44 @@ router.post(
       await session.endSession();
     }
   }),
+);
+
+
+// Download Order Invoice PDF
+router.get(
+  "/:id/invoice",
+  protect,
+  asyncHandler(async (req, res) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(400);
+      throw new Error("Invalid order ID");
+    }
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      res.status(404);
+      throw new Error("Order not found");
+    }
+
+    const isOwner =
+      order.user.toString() === req.user._id.toString();
+
+    const isAdmin = req.user.isAdmin === true;
+
+    if (!isOwner && !isAdmin) {
+      res.status(403);
+      throw new Error("Not authorized to download this invoice");
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="MINIS-Invoice-${order._id}.pdf"`
+    );
+
+    generateOrderInvoice(order, res);
+  })
 );
 
 // GET /api/orders/my - Get logged-in customer's orders

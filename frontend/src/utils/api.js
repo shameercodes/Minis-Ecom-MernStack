@@ -101,6 +101,11 @@ export const createOrder = (data) => API.post('/orders', data);
 export const getMyOrders = () => API.get('/orders/my');
 export const getOrder = (id) => API.get(`/orders/${id}`);
 
+export const downloadOrderInvoice = (id) =>
+  API.get(`/orders/${id}/invoice`, {
+    responseType: "blob",
+  });
+
 // Coupons
 export const validateCoupon = (data) => API.post('/coupons/validate', data);
 
