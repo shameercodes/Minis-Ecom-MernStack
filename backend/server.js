@@ -48,6 +48,7 @@ const cartRoutes = require("./routes/cartRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const couponRoutes = require("./routes/couponRoutes");
+const wishlistShareRoutes = require("./routes/wishlistShareRoutes");
 
 const { registerOptionsHandler } = require("./handlers/registerOptionsHandler");
 const { emailConfigured } = require("./utils/sendVerificationEmail");
@@ -101,6 +102,7 @@ api.use("/cart", cartRoutes);
 api.use("/contact", contactRoutes);
 api.use("/admin", adminRoutes);
 api.use("/coupons", couponRoutes);
+api.use("/wishlist-share", wishlistShareRoutes);
 
 app.get("/", (req, res) => {
   res.send("MINIS API is running...");

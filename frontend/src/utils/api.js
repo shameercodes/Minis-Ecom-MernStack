@@ -134,4 +134,20 @@ export const getAdminUsers = (params) => API.get('/admin/users', { params });
 export const updateAdminUser = (id, data) => API.put(`/admin/users/${id}`, data);
 export const deleteAdminUser = (id) => API.delete(`/admin/users/${id}`);
 
+// Wishlist Sharing
+export const getMyWishlistShare = () =>
+  API.get("/wishlist-share");
+
+export const createWishlistShare = (productIds) =>
+  API.post("/wishlist-share", { productIds });
+
+export const syncWishlistShare = (productIds) =>
+  API.put("/wishlist-share/sync", { productIds });
+
+export const revokeWishlistShare = () =>
+  API.delete("/wishlist-share");
+
+export const getPublicWishlistShare = (token) =>
+  API.get(`/wishlist-share/public/${encodeURIComponent(token)}`);
+
 export default API;

@@ -29,6 +29,7 @@ import ContactPage from './pages/ContactPage';
 import WishlistPage from './pages/WishlistPage';
 import NotFoundPage from './pages/NotFoundPage';
 import Offers from "./pages/Offers";
+import SharedWishlistPage from "./pages/SharedWishlistPage";
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="contact" element={<ContactPage />} />
           <Route path="cart" element={<CartPage />} />
           <Route path="wishlist" element={<WishlistPage />} />
+          <Route path="shared-wishlist/:token" element={<SharedWishlistPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="verify-email" element={<VerifyEmailPage />} />
