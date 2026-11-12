@@ -59,7 +59,7 @@ async function sendOrderStatusEmail({ to, order, status, customerName }) {
   }
 
   const orderId = escapeHtml(order._id.toString());
-  const trackingUrl = `${FRONTEND_URL}/orders/${order._id}`;
+ const trackingUrl = `${FRONTEND_URL.replace(/\/+$/, "")}/orders/${encodeURIComponent(order._id.toString())}`;
   const name = escapeHtml(
     customerName || order.shippingAddress?.fullName || "Customer",
   );
