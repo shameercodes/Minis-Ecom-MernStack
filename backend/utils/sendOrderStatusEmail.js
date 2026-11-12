@@ -1,4 +1,8 @@
 const { sendEmail, isSendEmailReady } = require("./sendEmail");
+const FRONTEND_URL = process.env.FRONTEND_URL;
+if (!FRONTEND_URL) {
+  throw new Error("FRONTEND_URL is missing from environment variables.");
+}
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (char) => {
@@ -55,6 +59,7 @@ async function sendOrderStatusEmail({ to, order, status, customerName }) {
   }
 
   const orderId = escapeHtml(order._id.toString());
+  const trackingUrl = `${FRONTEND_URL}/orders/${order._id}`;
   const name = escapeHtml(
     customerName || order.shippingAddress?.fullName || "Customer",
   );
@@ -74,6 +79,14 @@ async function sendOrderStatusEmail({ to, order, status, customerName }) {
         <p><strong>Order Status:</strong> ${escapeHtml(status.toUpperCase())}</p>
       </div>
 
+      <div style="text-align:center;margin:25px 0;">
+  <a
+    href="${trackingUrl}"
+    style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 28px;border-radius:6px;font-weight:bold;"
+  >
+    Track Your Order
+  </a>
+</div>
       <p>Thank you for choosing MINIS!</p>
     </div>
   `;
