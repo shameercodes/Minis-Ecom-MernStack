@@ -5,7 +5,7 @@ const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Coupon = require("../models/Coupon");
-const { protect } = require("../middleware/auth");
+const { protect, admin } = require("../middleware/auth");
 const { sendOrderConfirmationEmail,} = require("../utils/sendVerificationEmail");
 const generateOrderInvoice = require("../utils/generateOrderInvoice");
 
@@ -463,5 +463,51 @@ router.get(
     res.json(order);
   }),
 );
+
+
+// @desc    Confirm Cash on Delivery payment
+// @route   PATCH /api/orders/:id/pay
+// @access  Admin
+router.patch("/:id/pay", protect, admin, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    res.status(400);
+    throw new Error("Invalid order ID");
+  }
+
+  const order = await Order.findById(id);
+
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
+  }
+
+  if (order.paymentMethod !== "Cash on Delivery") {
+    res.status(400);
+    throw new Error("This action is only available for Cash on Delivery orders");
+  }
+
+  if (order.status !== "delivered") {
+    res.status(400);
+    throw new Error("Only delivered orders can be marked as paid");
+  }
+
+  if (order.isPaid) {
+    res.status(400);
+    throw new Error("This order is already marked as paid");
+  }
+
+  order.isPaid = true;
+  order.paidAt = new Date();
+
+  const updatedOrder = await order.save();
+
+  res.json({
+    message: "Payment confirmed successfully",
+    order: updatedOrder,
+  });
+}));
+
 
 module.exports = router;

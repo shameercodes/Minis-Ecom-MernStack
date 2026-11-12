@@ -133,6 +133,7 @@ export const createAdminProduct = (data) => API.post('/admin/products', data);
 export const updateAdminProduct = (id, data) => API.put(`/admin/products/${id}`, data);
 export const deleteAdminProduct = (id) => API.delete(`/admin/products/${id}`);
 export const getAdminOrders = (params) => API.get('/admin/orders', { params });
+export const markAdminOrderAsPaid = (id) => API.patch(`/orders/${id}/pay`);
 export const updateAdminOrderStatus = (id, status) => API.put(`/admin/orders/${id}/status`, { status });
 export const deleteAdminOrder = (id) => API.delete(`/admin/orders/${id}`);
 export const getAdminUsers = (params) => API.get('/admin/users', { params });
