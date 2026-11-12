@@ -355,7 +355,6 @@ router.put(
       previousStatus !== updatedOrder.status &&
       notificationStatuses.includes(updatedOrder.status)
     ) {
-      console.log("MINIS: Entered order status email notification block");
       try {
         const customer = await User.findById(updatedOrder.user).select(
           "name email",
