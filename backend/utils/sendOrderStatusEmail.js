@@ -1,69 +1,102 @@
-const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:25px 10px;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#333;">
+const { sendEmail, isSendEmailReady } = require("./sendEmail");
+const FRONTEND_URL = process.env.FRONTEND_URL;
+if (!FRONTEND_URL) {
+  throw new Error("FRONTEND_URL is missing from environment variables.");
+}
 
-  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;">
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (char) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
 
-    <div style="background:#111;padding:28px 20px;text-align:center;">
-      <h1 style="margin:0;color:#fff;font-size:28px;letter-spacing:4px;">MINIS</h1>
-      <p style="margin:8px 0 0;color:#ccc;font-size:11px;letter-spacing:2px;">YOUR STYLE, YOUR STORY</p>
+    return entities[char];
+  });
+}
+
+const statusMessages = {
+  processing: {
+    subject: "Your MINIS order is being prepared",
+    heading: "Your order is being prepared!",
+    message: "Our team is preparing your order. We'll keep you updated.",
+  },
+  shipped: {
+    subject: "Your MINIS order is on its way",
+    heading: "Your order has been shipped!",
+    message: "Your order is on its way. We hope you enjoy your purchase!",
+  },
+  delivered: {
+    subject: "Your MINIS order has been delivered",
+    heading: "Your order has been delivered!",
+    message:
+      "Your order has been successfully marked as delivered. Thank you for shopping with MINIS!",
+  },
+  cancelled: {
+    subject: "Your MINIS order has been cancelled",
+    heading: "Your order has been cancelled",
+    message:
+      "Your order has been cancelled. Please contact our support team if you have any questions.",
+  },
+};
+
+async function sendOrderStatusEmail({ to, order, status, customerName }) {
+  if (!isSendEmailReady()) {
+    throw new Error("Brevo email configuration is missing.");
+  }
+
+  if (!to || !order || !status) {
+    throw new Error("Customer email, order, and status are required.");
+  }
+
+  const notification = statusMessages[status];
+
+  if (!notification) {
+    throw new Error(`Unsupported order status: ${status}`);
+  }
+
+  const orderId = escapeHtml(order._id.toString());
+  const trackingUrl = `${FRONTEND_URL}/orders/${order._id}`;
+  const name = escapeHtml(
+    customerName || order.shippingAddress?.fullName || "Customer",
+  );
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#333;padding:20px;">
+      <h2 style="color:#111;">MINIS</h2>
+
+      <h2>Hello ${name}!</h2>
+
+      <h3>${notification.heading}</h3>
+
+      <p>${notification.message}</p>
+
+      <div style="background:#f3f4f6;padding:18px;border-radius:8px;margin:20px 0;">
+        <p><strong>Order ID:</strong> ${orderId}</p>
+        <p><strong>Order Status:</strong> ${escapeHtml(status.toUpperCase())}</p>
+      </div>
+
+      <div style="text-align:center;margin:25px 0;">
+  <a
+    href="${trackingUrl}"
+    style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 28px;border-radius:6px;font-weight:bold;"
+  >
+    Track Your Order
+  </a>
+</div>
+      <p>Thank you for choosing MINIS!</p>
     </div>
+  `;
 
-    <div style="padding:30px 25px 15px;">
-      <p style="font-size:15px;color:#555;">Hello ${name},</p>
+  await sendEmail({
+    to,
+    subject: notification.subject,
+    html,
+  });
 
-      <h2 style="font-size:23px;color:#111;margin:18px 0 12px;">
-        ${notification.heading}
-      </h2>
+}
 
-      <p style="font-size:14px;line-height:1.7;color:#666;">
-        ${notification.message}
-      </p>
-    </div>
-
-    <div style="margin:15px 25px 25px;padding:20px;background:#f7f7f7;border:1px solid #eee;border-radius:8px;">
-      <h3 style="margin:0 0 18px;font-size:14px;color:#111;">ORDER INFORMATION</h3>
-
-      <p style="margin:0 0 7px;font-size:12px;color:#888;">Order ID</p>
-      <p style="margin:0 0 18px;font-size:14px;font-weight:bold;color:#222;word-break:break-all;">
-        #${orderId}
-      </p>
-
-      <p style="margin:0 0 8px;font-size:12px;color:#888;">Order Status</p>
-      <span style="display:inline-block;background:#111;color:#fff;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:bold;">
-        ${escapeHtml(status.toUpperCase())}
-      </span>
-    </div>
-
-    <div style="padding:5px 25px 30px;text-align:center;">
-      <a href="${trackingUrl}"
-         style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:15px 30px;border-radius:6px;font-size:14px;font-weight:bold;">
-        Track Your Order
-      </a>
-
-      <p style="margin:15px 0 0;font-size:12px;color:#888;">
-        Click above to view your order details.
-      </p>
-    </div>
-
-    <div style="background:#f7f7f7;border-top:1px solid #eee;padding:22px;text-align:center;">
-      <p style="margin:0 0 8px;font-size:14px;font-weight:bold;color:#222;">
-        Thank you for choosing MINIS!
-      </p>
-      <p style="margin:0;font-size:12px;color:#888;">
-        We appreciate your trust in us.
-      </p>
-      <p style="margin:15px 0 0;font-size:11px;color:#aaa;">
-        &copy; ${new Date().getFullYear()} MINIS. All rights reserved.
-      </p>
-    </div>
-
-  </div>
-</body>
-</html>
-`;
+module.exports = { sendOrderStatusEmail };
