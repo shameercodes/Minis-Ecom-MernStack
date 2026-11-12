@@ -96,6 +96,9 @@ async function sendOrderStatusEmail({ to, order, status, customerName }) {
     subject: notification.subject,
     html,
   });
+
+  console.log("TRACKING URL:", trackingUrl);
+  console.log("TRACKING BUTTON INCLUDED:", html.includes("Track Your Order"));
 }
 
 module.exports = { sendOrderStatusEmail };
