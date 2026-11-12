@@ -91,14 +91,24 @@ async function sendOrderStatusEmail({ to, order, status, customerName }) {
     </div>
   `;
 
-  await sendEmail({
-    to,
-    subject: notification.subject,
-    html,
-  });
+//   await sendEmail({
+//     to,
+//     subject: notification.subject,
+//     html,
+//   });
+    
+    console.log("========== MINIS EMAIL DEBUG ==========");
+    console.log("Frontend URL:", FRONTEND_URL);
+    console.log("Tracking URL:", trackingUrl);
+    console.log("Tracking button exists:", html.includes("Track Your Order"));
+    console.log("=======================================");
 
-  console.log("TRACKING URL:", trackingUrl);
-  console.log("TRACKING BUTTON INCLUDED:", html.includes("Track Your Order"));
+    await sendEmail({
+      to,
+      subject: notification.subject,
+      html,
+    });
+
 }
 
 module.exports = { sendOrderStatusEmail };
