@@ -64,32 +64,145 @@ async function sendOrderStatusEmail({ to, order, status, customerName }) {
     customerName || order.shippingAddress?.fullName || "Customer",
   );
 
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#333;padding:20px;">
-      <h2 style="color:#111;">MINIS</h2>
 
-      <h2>Hello ${name}!</h2>
+const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MINIS Order Update</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#222;">
 
-      <h3>${notification.heading}</h3>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="background-color:#f4f4f5;padding:30px 12px;">
+    <tr>
+      <td align="center">
 
-      <p>${notification.message}</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+          style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;">
 
-      <div style="background:#f3f4f6;padding:18px;border-radius:8px;margin:20px 0;">
-        <p><strong>Order ID:</strong> ${orderId}</p>
-        <p><strong>Order Status:</strong> ${escapeHtml(status.toUpperCase())}</p>
-      </div>
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:#111111;padding:28px 20px;">
+              <h1 style="margin:0;color:#ffffff;font-size:28px;letter-spacing:4px;">
+                MINIS
+              </h1>
+              <p style="margin:8px 0 0;color:#d4d4d4;font-size:12px;letter-spacing:2px;">
+                YOUR STYLE, YOUR STORY
+              </p>
+            </td>
+          </tr>
 
-      <div style="text-align:center;margin:25px 0;">
-  <a
-    href="${trackingUrl}"
-    style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 28px;border-radius:6px;font-weight:bold;"
-  >
-    Track Your Order
-  </a>
-</div>
-      <p>Thank you for choosing MINIS!</p>
-    </div>
-  `;
+          <!-- Main Content -->
+          <tr>
+            <td style="padding:35px 28px 20px;">
+
+              <p style="margin:0 0 12px;font-size:15px;color:#555;">
+                Hello ${name},
+              </p>
+
+              <h2 style="margin:0 0 14px;font-size:24px;line-height:1.4;color:#111;">
+                ${notification.heading}
+              </h2>
+
+              <p style="margin:0;font-size:15px;line-height:1.7;color:#666;">
+                ${notification.message}
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Order Information -->
+          <tr>
+            <td style="padding:10px 28px 25px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                style="background:#f8f8f8;border:1px solid #eeeeee;border-radius:8px;">
+
+                <tr>
+                  <td style="padding:20px;">
+
+                    <p style="margin:0 0 14px;font-size:14px;font-weight:bold;color:#111;">
+                      ORDER INFORMATION
+                    </p>
+
+                    <p style="margin:0 0 12px;font-size:13px;color:#777;">
+                      Order ID
+                    </p>
+
+                    <p style="margin:0 0 18px;font-size:14px;font-weight:bold;color:#222;word-break:break-all;">
+                      #${orderId}
+                    </p>
+
+                    <p style="margin:0 0 10px;font-size:13px;color:#777;">
+                      Current Status
+                    </p>
+
+                    <span style="display:inline-block;padding:8px 14px;background:#111;color:#ffffff;border-radius:20px;font-size:12px;font-weight:bold;letter-spacing:1px;">
+                      ${escapeHtml(status.toUpperCase())}
+                    </span>
+
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Tracking Button -->
+          <tr>
+            <td align="center" style="padding:5px 28px 35px;">
+
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" bgcolor="#111111" style="border-radius:6px;">
+                    <a href="${escapeHtml(trackingUrl)}"
+                      target="_blank"
+                      style="display:inline-block;padding:15px 32px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;">
+                      Track Your Order
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#888;">
+                Click the button above to view your order details.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background:#f8f8f8;padding:24px 20px;border-top:1px solid #eeeeee;">
+
+              <p style="margin:0 0 8px;font-size:14px;font-weight:bold;color:#111;">
+                Thank you for choosing MINIS!
+              </p>
+
+              <p style="margin:0;font-size:12px;color:#888;line-height:1.6;">
+                We appreciate your trust in us.
+              </p>
+
+              <p style="margin:18px 0 0;font-size:11px;color:#aaa;">
+                &copy; ${new Date().getFullYear()} MINIS. All rights reserved.
+              </p>
+
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`;
+
 
   await sendEmail({
     to,
