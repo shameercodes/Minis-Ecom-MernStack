@@ -47,6 +47,7 @@ Features
 - Enable or disable inventory tracking.
 - Maintain product availability.
 - Display featured products.
+- 
 3. Shopping Cart and Checkout
 - Add products to the shopping cart.
 - Update product quantities.
@@ -60,7 +61,8 @@ Features
 - Calculate the final order total using server-side product prices.
 - Prevent duplicate products in an order.
 - Validate product quantities and IDs before order creation.
-4. Coupon and Discount System
+- 
+1. Coupon and Discount System
 - Public coupon availability endpoint.
 - Percentage-based discounts.
 - Fixed-amount discounts.
@@ -72,7 +74,8 @@ Features
 - Coupon usage tracking.
 - Checkout discount calculation.
 - Server-side coupon validation.
-5. Order Management
+- 
+1. Order Management
 - Create customer orders.
 - Store complete order information.
 - Store customer shipping details.
@@ -90,7 +93,8 @@ Supported order statuses:
 - Shipped
 - Delivered
 - Cancelled
-6. Inventory Management
+- 
+1. Inventory Management
 - Maintain product stock quantities.
 - Automatically deduct stock when orders are created.
 - Validate available stock before order creation.
@@ -100,7 +104,8 @@ Supported order statuses:
 - Prevent duplicate inventory restoration.
 - Display inventory information in the admin dashboard.
 - Provide low-stock product information.
-7. Payment Management
+- 
+1. Payment Management
 Currently supported checkout payment options:
 - Cash on Delivery (COD)
 - Bank Transfer
@@ -119,7 +124,7 @@ Planned integration:
 - Secure payment callbacks.
 Note: Selecting JazzCash or Easypaisa in the current checkout does not
 mean that live gateway processing is already integrated.
-8. Admin Dashboard
+1. Admin Dashboard
 Administrative functionality includes:
 - Dashboard statistics.
 - Revenue and order information.
@@ -133,7 +138,7 @@ Administrative functionality includes:
 - Coupon management.
 Administrative routes are protected through authentication and admin
 authorization middleware.
-9. Email Notifications
+1. Email Notifications
 The application uses the Brevo email API for transactional email
 delivery.
 

@@ -1,2 +1,0 @@
-# Replit: repo root should be the folder that contains `backend/`.
-run = "cd backend && node server.js"
