@@ -1,4 +1,5 @@
 MINIS --- Full-Stack MERN E-Commerce Platform
+
 MINIS is a full-stack e-commerce web application built using the MERN
 stack (MongoDB, Express.js, React.js, and Node.js). It provides a
 complete online shopping experience with product browsing, shopping
